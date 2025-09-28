@@ -2,7 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useRequireAuth } from '@/lib/auth';
-import { meApi } from '@/lib/http';
+import { me } from '@/lib/service-auth/api';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 
@@ -20,7 +20,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         return;
       }
       try {
-        await meApi(token);
+  await me(token);
       } catch {
         setToken(null);
         router.replace('/login');
