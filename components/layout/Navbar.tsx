@@ -138,7 +138,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           {/* Notifications dropdown */}
           {notificationsOpen && (
             <div
-              className="absolute right-0 mt-2 w-80 sm:w-96 rounded-lg shadow-lg py-2 ot-card border backdrop-blur-sm"
+              className="fixed sm:absolute inset-x-3 sm:inset-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 z-50 w-auto sm:w-96 rounded-xl shadow-xl py-2 ot-card border backdrop-blur-sm"
               style={{ 
                 background: 'var(--background)', 
                 borderColor: 'var(--border)',
@@ -209,7 +209,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           {userMenuOpen && (
             <div
               role="menu"
-              className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg py-2 ot-card border backdrop-blur-sm"
+              className="fixed sm:absolute inset-x-3 sm:inset-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 z-50 w-auto sm:w-56 rounded-xl shadow-xl py-2 ot-card border backdrop-blur-sm"
               style={{ 
                 background: 'var(--background)', 
                 borderColor: 'var(--border)' 
