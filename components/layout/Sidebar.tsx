@@ -125,7 +125,7 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
           variant === 'desktop' ? 'border-r shadow-sm' : 'shadow-2xl'
         }`}
         style={{
-          background: 'var(--surface)',
+          background: variant === 'mobile' ? 'var(--background)' : 'var(--surface)',
           borderColor: 'var(--border)',
           ...(mobileStyles ?? {}),
         }}
