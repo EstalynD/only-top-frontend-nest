@@ -27,3 +27,16 @@ export function logoutApi(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export type MeResponse = { user: { username: string } };
+export async function meApi(token: string): Promise<MeResponse> {
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+  return (await res.json()) as MeResponse;
+}
