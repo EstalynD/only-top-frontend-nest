@@ -6,7 +6,7 @@ import { listRoles, assignRoles, revokeRoles } from '@/lib/service-rbac/api';
 import type { Role } from '@/lib/service-rbac/types';
 import UserRolesModal from '@/components/admin/UserRolesModal';
 import type { AdminUserListItem } from '@/lib/service-user/types';
-import { Shield, Users, Search, Edit } from 'lucide-react';
+import { Users, Search } from 'lucide-react';
 
 export default function AdminUsersPage() {
   const { token } = useAuth();
@@ -28,8 +28,9 @@ export default function AdminUsersPage() {
     try {
       const res = await listUsers(token, q, page, limit);
       setData({ items: res.items, total: res.total, pages: res.pages });
-    } catch (e: any) {
-      setError(e.message || 'Error cargando usuarios');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error cargando usuarios';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export default function AdminUsersPage() {
       try {
         const roles = await listRoles(token);
         setRolesCatalog(roles);
-      } catch (e) {
+      } catch {
         // silencioso en UI
       }
     })();
@@ -82,9 +83,10 @@ export default function AdminUsersPage() {
       }));
 
       closeAssignModal();
-    } catch (e: any) {
-      alert(e.message || 'No se pudo actualizar los roles del usuario');
-      throw e;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo actualizar los roles del usuario';
+      alert(msg);
+      throw err;
     } finally {
       setSubmitting(false);
     }

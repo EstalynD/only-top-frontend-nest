@@ -37,8 +37,9 @@ export default function RolesPage() {
       ]);
       setRoles(rolesData);
       setPermissions(permissionsData);
-    } catch (e: any) {
-      setError(e.message || 'Error cargando datos');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error cargando datos';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -82,9 +83,10 @@ export default function RolesPage() {
         setRoles((prev) => prev.map(r => r.key === editingRole.key ? updatedRole : r));
       }
       closeModal();
-    } catch (e: any) {
-      alert(e.message || 'No se pudo guardar el rol');
-      throw e; // Re-throw para que RoleModal pueda manejarlo si es necesario
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo guardar el rol';
+      alert(msg);
+      throw err; // Re-throw para que RoleModal pueda manejarlo si es necesario
     } finally {
       setSubmitting(false);
     }
@@ -96,8 +98,9 @@ export default function RolesPage() {
     try {
       await deleteRole(token, key);
       setRoles((prev) => prev.filter((r) => r.key !== key));
-    } catch (e: any) {
-      alert(e.message || 'No se pudo eliminar');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo eliminar';
+      alert(msg);
     }
   };
 

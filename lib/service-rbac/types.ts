@@ -13,7 +13,7 @@ export type Role = {
   key: string;
   name: string;
   permissions: string[];
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 };
 
 export type AssignRolesResponse = { roles: string[]; permissions: string[] };

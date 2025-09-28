@@ -119,7 +119,7 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
   }, [router, setToken]);
 
   // Dropdown: Sistema -> Gestionar roles
-  const sistemaChildren = React.useMemo(() => ([
+  const sistemaChildren: NavItem[] = React.useMemo(() => ([
     {
       id: 'gestionar-roles',
       href: '/admin/rbac/roles',
@@ -234,7 +234,7 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
                         <Link
                           key={child.id}
                           href={child.href}
-                          onClick={(e) => handleNavClick(child as any, e as any)}
+                          onClick={(e) => handleNavClick(child, e)}
                           className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${
                             active ? 'shadow-sm' : 'ot-hover-surface hover:shadow-sm'
                           }`}

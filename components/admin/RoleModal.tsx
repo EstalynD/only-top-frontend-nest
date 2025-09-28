@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import Modal from '@/components/ui/Modal';
-import type { Role, PermissionDef } from '@/lib/service-rbac/types';
+import type { PermissionDef } from '@/lib/service-rbac/types';
 import { Shield, Save, Check } from 'lucide-react';
 
 export interface RoleFormData {
