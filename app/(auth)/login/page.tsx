@@ -2,6 +2,7 @@
 import React from 'react';
 import { loginApi } from '@/lib/http';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = React.useState('');
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const router = useRouter();
+  const { setToken } = useAuth();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,8 +23,7 @@ export default function LoginPage() {
   const identifier = email.trim();
   const username = identifier.includes('@') ? identifier.toLowerCase() : identifier;
   const res = await loginApi(username, password);
-      sessionStorage.setItem('ot_token', res.token);
-      if (remember) sessionStorage.setItem('ot_remember', '1');
+    setToken(res.token, true);
       router.replace('/dashboard');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
