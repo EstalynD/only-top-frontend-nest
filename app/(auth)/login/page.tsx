@@ -24,8 +24,9 @@ export default function LoginPage() {
       sessionStorage.setItem('ot_token', res.token);
       if (remember) sessionStorage.setItem('ot_remember', '1');
       router.replace('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
+      setError(msg);
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,9 @@ import React from 'react';
 type Props = React.InputHTMLAttributes<HTMLInputElement> & { label?: string };
 
 export function Input({ label, className, id, ...props }: Props) {
-  const inputId = id || React.useId();
+  // useId debe llamarse siempre de forma incondicional
+  const generatedId = React.useId();
+  const inputId = id ?? generatedId;
   return (
     <div>
       {label ? (
