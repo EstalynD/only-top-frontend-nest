@@ -28,7 +28,7 @@ export async function requestJSON<T>(path: string, init?: RequestInit): Promise<
   }
   try {
     return JSON.parse(raw) as T;
-  } catch (e) {
+  } catch {
     // Si el servidor respondió con texto no JSON pero exitoso, exponerlo por si es útil
     // Mantener compatibilidad devolviendo cualquier string como unknown
     return raw as unknown as T;

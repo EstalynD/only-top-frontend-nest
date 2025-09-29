@@ -1,4 +1,4 @@
-import type { CurrencyCode, CurrencyFormatSpec } from './types';
+import type { CurrencyFormatSpec } from './types';
 
 export function formatCurrency(amount: number, spec: CurrencyFormatSpec): string {
   const formatted = amount.toLocaleString('en-US', {

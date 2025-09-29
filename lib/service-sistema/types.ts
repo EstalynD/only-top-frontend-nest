@@ -33,7 +33,7 @@ export type TrmEntry = {
   _id: string;
   effectiveAt: string;
   copPerUsd: number;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown> & { note?: string };
   createdAt: string;
   updatedAt: string;
 };
@@ -41,7 +41,7 @@ export type TrmEntry = {
 export type CreateTrmRequest = {
   effectiveAt: string;
   copPerUsd: number;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown> & { note?: string };
 };
 
 export type ListTrmQuery = {

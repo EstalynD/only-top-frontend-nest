@@ -245,7 +245,7 @@ export default function ConfiguracionPage() {
   }
 
   const copSpec = currencies.find(c => c.code === 'COP');
-  const usdSpec = currencies.find(c => c.code === 'USD');
+  // Nota: 'usdSpec' se removió porque no se utiliza actualmente
 
   return (
     <div className="space-y-8">
