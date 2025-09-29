@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import { getProfile } from '@/lib/service-user/api';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -76,8 +77,9 @@ const NAV_ITEMS: NavItem[] = [
 
 export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { setToken } = useAuth();
+  const { setToken, token, ready } = useAuth();
   const router = useRouter();
+  const [hasSystemAdmin, setHasSystemAdmin] = React.useState(false);
 
   const isActive = (href: string) => {
     if (href === '#' || !href) return false;
@@ -118,6 +120,26 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
     router.replace('/login');
   }, [router, setToken]);
 
+  // Cargar permisos del usuario y verificar system.admin
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!ready || !token) {
+        setHasSystemAdmin(false);
+        return;
+      }
+      try {
+        const me = await getProfile(token);
+        const perms = me.user?.permissions ?? [];
+        if (!cancelled) setHasSystemAdmin(perms.includes('system.admin'));
+      } catch {
+        if (!cancelled) setHasSystemAdmin(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [token, ready]);
+
   // Dropdown: Sistema -> Gestionar roles
   const sistemaChildren: NavItem[] = React.useMemo(() => ([
     {
@@ -134,7 +156,7 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
     },
   ]), []);
 
-  const grupoSistemaActivo = sistemaChildren.some((c) => isActive(c.href));
+  const grupoSistemaActivo = hasSystemAdmin && sistemaChildren.some((c) => isActive(c.href));
   const [sistemaOpen, setSistemaOpen] = React.useState<boolean>(false);
   React.useEffect(() => {
     if (grupoSistemaActivo) setSistemaOpen(true);
@@ -203,7 +225,8 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
               Navegación
             </h3>
             <div className="space-y-1">
-              {/* Dropdown: Sistema */}
+              {/* Dropdown: Sistema (solo si tiene permiso system.admin) */}
+              {hasSystemAdmin && (
               <div className="space-y-1 mb-2">
                 <button
                   onClick={() => setSistemaOpen((v) => !v)}
@@ -251,6 +274,7 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
                   </div>
                 )}
               </div>
+              )}
               {NAV_ITEMS.map((item) => {
                 const isItemActive = isActive(item.href);
                 

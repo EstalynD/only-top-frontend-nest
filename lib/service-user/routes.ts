@@ -1,5 +1,6 @@
 export const USER_ROUTES = {
   profile: '/profile',
+  adminCreate: '/admin/users',
   adminList: (q?: string, page: number = 1, limit: number = 20) => {
     const params = new URLSearchParams();
     if (q && q.trim()) params.set('q', q.trim());

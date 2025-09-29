@@ -1,15 +1,20 @@
 "use client";
 import React from 'react';
 import { useAuth } from '@/lib/auth';
-import { listUsers } from '@/lib/service-user/api';
+import { listUsers, createUser } from '@/lib/service-user/api';
 import { listRoles, assignRoles, revokeRoles } from '@/lib/service-rbac/api';
 import type { Role } from '@/lib/service-rbac/types';
 import UserRolesModal from '@/components/admin/UserRolesModal';
+import UserCreateModal from '@/components/admin/UserCreateModal';
 import type { AdminUserListItem } from '@/lib/service-user/types';
 import { Users, Search } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
+import Loader from '@/components/ui/Loader';
 
 export default function AdminUsersPage() {
   const { token } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [q, setQ] = React.useState('');
@@ -20,6 +25,10 @@ export default function AdminUsersPage() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<AdminUserListItem | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [creating, setCreating] = React.useState(false);
+
+  
 
   const fetchData = React.useCallback(async () => {
     if (!token) return;
@@ -37,6 +46,12 @@ export default function AdminUsersPage() {
   }, [token, q, page, limit]);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
+
+  const onSearchSubmit = React.useCallback(async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setPage(1);
+    await fetchData();
+  }, [fetchData]);
 
   // Cargar catálogo de roles una sola vez
   React.useEffect(() => {
@@ -61,6 +76,27 @@ export default function AdminUsersPage() {
     setSelectedUser(null);
   };
 
+  const openCreateModal = () => setCreateOpen(true);
+  const closeCreateModal = () => setCreateOpen(false);
+
+  const submitCreateUser = async (form: { username: string; password: string; displayName?: string; email?: string }) => {
+    if (!token) return;
+    setCreating(true);
+    try {
+      const created = await createUser(token, form);
+      // Prepend en la lista actual
+      setData((prev) => ({ ...prev, items: [created, ...prev.items] }));
+      closeCreateModal();
+      toast({ type: 'success', title: 'Usuario creado', description: `Se creó ${created.username} correctamente.` });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo crear el usuario';
+      toast({ type: 'error', title: 'Error al crear usuario', description: msg });
+      throw err;
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const submitUserRoles = async (nextRoles: string[]) => {
     if (!token || !selectedUser) return;
     setSubmitting(true);
@@ -83,9 +119,10 @@ export default function AdminUsersPage() {
       }));
 
       closeAssignModal();
+      toast({ type: 'success', title: 'Roles actualizados', description: `Se actualizaron los roles de ${selectedUser.username}.` });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No se pudo actualizar los roles del usuario';
-      alert(msg);
+      toast({ type: 'error', title: 'Error al actualizar roles', description: msg });
       throw err;
     } finally {
       setSubmitting(false);
@@ -94,8 +131,8 @@ export default function AdminUsersPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <header className="flex items-center justify-between flex-col gap-3 sm:flex-row">
-        <div className="flex items-center space-x-3">
+      <header className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <Users size={24} style={{ color: 'var(--ot-blue-500)' }} />
           <div>
             <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
@@ -106,31 +143,48 @@ export default function AdminUsersPage() {
             </p>
           </div>
         </div>
-        <div className="w-full sm:w-auto flex items-center gap-2">
-          <div className="flex-1 sm:flex-none relative">
+        <form
+          role="search"
+          onSubmit={onSearchSubmit}
+          className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-2"
+          aria-label="Buscar usuarios"
+        >
+          <div className="relative flex-1 sm:flex-none">
             <input
               value={q}
-              onChange={(e) => { setQ(e.target.value); setPage(1); }}
+              onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por usuario, nombre o email"
-              className="w-full sm:w-80 px-3 py-2 rounded-lg border"
+              aria-label="Buscar por usuario, nombre o email"
+              className="w-full sm:w-80 pl-10 pr-3 py-2 rounded-lg border"
               style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
             />
-            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           </div>
-          <button
-            onClick={fetchData}
-            className="px-4 py-2 rounded-lg text-white font-medium"
-            style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
-          >
-            Buscar
-          </button>
-        </div>
+          <div className="flex items-center gap-2 sm:justify-end">
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 rounded-lg text-white font-medium disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+            >
+              {loading ? 'Buscando…' : 'Buscar'}
+            </button>
+            <Button
+              type="button"
+              onClick={openCreateModal}
+              className="px-4 py-2 rounded-lg text-white font-medium"
+              variant="success"
+            >
+              Nuevo usuario
+            </Button>
+          </div>
+        </form>
       </header>
 
       <section className="rounded-xl border shadow-sm overflow-hidden" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
         {loading ? (
-          <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>
-            Cargando…
+          <div className="p-12 flex items-center justify-center">
+            <Loader size="lg" label="Cargando usuarios" />
           </div>
         ) : error ? (
           <div className="p-8 text-center text-red-500">{error}</div>
@@ -256,6 +310,12 @@ export default function AdminUsersPage() {
         onSubmit={submitUserRoles}
         isSubmitting={submitting}
         username={selectedUser?.username}
+      />
+      <UserCreateModal
+        isOpen={createOpen}
+        onClose={closeCreateModal}
+        onSubmit={submitCreateUser}
+        isSubmitting={creating}
       />
     </div>
   );

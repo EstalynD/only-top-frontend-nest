@@ -5,6 +5,7 @@ import { useAuth, useRequireAuth } from '@/lib/auth';
 import { me } from '@/lib/service-auth/api';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -32,9 +33,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   if (!isAuthenticated) return null; // Mientras redirige
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-background)', color: 'var(--color-foreground)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <div className="flex flex-1 relative">
+    <ToastProvider>
+      <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-background)', color: 'var(--color-foreground)' }}>
+        <Navbar onMenuClick={() => setSidebarOpen(true)} />
+        <div className="flex flex-1 relative">
         {/* Sidebar desktop */}
         <div className="hidden md:block">
           <Sidebar variant="desktop" />
@@ -57,10 +59,11 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Contenido */}
-        <div className="flex-1 p-4 md:ml-0">
-          {children}
+          <div className="flex-1 p-4 md:ml-0">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

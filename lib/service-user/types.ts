@@ -23,3 +23,12 @@ export type AdminUserListResponse = {
   total: number;
   pages: number;
 };
+
+export type CreateUserRequest = {
+  username: string;
+  password: string;
+  displayName?: string | null;
+  email?: string | null;
+};
+
+export type AdminUser = AdminUserListItem; // misma forma para admin

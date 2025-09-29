@@ -38,9 +38,24 @@ export default function RoleModal({
     setForm(initialData);
   }, [initialData]);
 
+  // Helpers de estado
+  const isEdit = mode === 'edit';
+  const isNameChanged = React.useMemo(() => {
+    return form.name.trim() !== initialData.name.trim();
+  }, [form.name, initialData.name]);
+  const arePermissionsChanged = React.useMemo(() => {
+    const a = new Set(form.permissions);
+    const b = new Set(initialData.permissions);
+    if (a.size !== b.size) return true;
+    for (const p of a) if (!b.has(p)) return true;
+    return false;
+  }, [form.permissions, initialData.permissions]);
+  const isDirty = isEdit ? (isNameChanged || arePermissionsChanged) : true;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.key.trim() || !form.name.trim()) return;
+    if (isEdit && !isDirty) return; // Evitar submit si no hay cambios
     
     try {
       await onSubmit({
@@ -92,6 +107,8 @@ export default function RoleModal({
               type="text"
               required
               disabled={mode === 'edit'}
+              pattern="^[A-Z0-9_]+$"
+              title="Solo mayúsculas, números y guiones bajos"
               className="w-full px-3 py-2 rounded-lg border font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ 
                 background: mode === 'edit' ? 'var(--surface-muted)' : 'var(--surface)', 
@@ -201,12 +218,16 @@ export default function RoleModal({
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (isEdit && !isDirty)}
             className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
           >
             <Save size={16} />
-            <span>{isSubmitting ? 'Guardando…' : 'Guardar'}</span>
+            <span>
+              {isSubmitting
+                ? (isEdit ? 'Actualizando…' : 'Guardando…')
+                : (isEdit ? (isDirty ? 'Guardar cambios' : 'Sin cambios') : 'Crear rol')}
+            </span>
           </button>
         </div>
       </form>

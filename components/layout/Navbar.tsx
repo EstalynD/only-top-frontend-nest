@@ -3,6 +3,7 @@ import React from 'react';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import { getProfile } from '@/lib/service-user/api';
 import { 
   Menu, 
   Sun, 
@@ -20,10 +21,11 @@ type NavbarProps = {
 
 export function Navbar({ onMenuClick }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
-  const { setToken } = useAuth();
+  const { token, setToken, ready } = useAuth();
   const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
+  const [profile, setProfile] = React.useState<{ username: string; displayName?: string | null; email?: string | null } | null>(null);
 
   // Close dropdowns when clicking outside
   React.useEffect(() => {
@@ -54,6 +56,31 @@ export function Navbar({ onMenuClick }: NavbarProps) {
     setNotificationsOpen((prev) => !prev);
     setUserMenuOpen(false);
   };
+
+  // Cargar perfil para mostrar nombre y email en el navbar
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!ready || !token) {
+        setProfile(null);
+        return;
+      }
+      try {
+        const res = await getProfile(token);
+        if (!cancelled) {
+          const u = res.user;
+          setProfile({ username: u.username, displayName: u.displayName, email: u.email });
+        }
+      } catch {
+        if (!cancelled) setProfile(null);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [token, ready]);
+
+  const displayName = profile?.displayName || profile?.username || 'Usuario';
+  const email = profile?.email || '';
 
   return (
     <header
@@ -192,10 +219,10 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             </div>
             <div className="hidden sm:block text-left min-w-0">
               <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                Administrador
+                {displayName}
               </p>
               <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                admin@onlytop.com
+                {email || ' '}
               </p>
             </div>
             <ChevronDown 
@@ -219,10 +246,10 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               {/* User info */}
               <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  Administrador
+                  {displayName}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  admin@onlytop.com
+                  {email || ' '}
                 </p>
               </div>
 

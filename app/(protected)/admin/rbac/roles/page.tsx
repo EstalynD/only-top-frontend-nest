@@ -4,6 +4,9 @@ import { useAuth } from '@/lib/auth';
 import { listRoles, createRole, deleteRole, updateRole, listPermissions } from '@/lib/service-rbac/api';
 import type { Role, PermissionDef } from '@/lib/service-rbac/types';
 import RoleModal, { RoleFormData, RoleModalMode } from '@/components/admin/RoleModal';
+import { useToast } from '@/components/ui/Toast';
+import Loader from '@/components/ui/Loader';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { 
   Plus, 
   Trash2, 
@@ -14,6 +17,7 @@ import {
 
 export default function RolesPage() {
   const { token } = useAuth();
+  const { toast } = useToast();
   const [roles, setRoles] = React.useState<Role[]>([]);
   const [permissions, setPermissions] = React.useState<PermissionDef[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -25,6 +29,10 @@ export default function RolesPage() {
   const [editingRole, setEditingRole] = React.useState<Role | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [initialFormData, setInitialFormData] = React.useState<RoleFormData>({ key: '', name: '', permissions: [] });
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmTarget, setConfirmTarget] = React.useState<string | null>(null);
+  const [confirmLoading, setConfirmLoading] = React.useState(false);
 
   const fetchData = React.useCallback(async () => {
     if (!token) return;
@@ -75,32 +83,44 @@ export default function RolesPage() {
       if (modalMode === 'create') {
         const newRole = await createRole(token, formData);
         setRoles((prev) => [newRole, ...prev]);
+  toast({ type: 'success', title: 'Rol creado', description: `Se creó el rol ${newRole.key}.` });
       } else if (editingRole) {
         const updatedRole = await updateRole(token, editingRole.key, {
           name: formData.name,
           permissions: formData.permissions
         });
         setRoles((prev) => prev.map(r => r.key === editingRole.key ? updatedRole : r));
+  toast({ type: 'success', title: 'Cambios guardados', description: `Rol ${updatedRole.key} actualizado.` });
       }
       closeModal();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No se pudo guardar el rol';
-      alert(msg);
+  toast({ type: 'error', title: 'Error', description: msg });
       throw err; // Re-throw para que RoleModal pueda manejarlo si es necesario
     } finally {
       setSubmitting(false);
     }
   };
 
-  const onDelete = async (key: string) => {
-    if (!token) return;
-    if (!confirm(`¿Eliminar rol ${key}?`)) return;
+  const requestDelete = (key: string) => {
+    setConfirmTarget(key);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || !confirmTarget) return;
+    setConfirmLoading(true);
     try {
-      await deleteRole(token, key);
-      setRoles((prev) => prev.filter((r) => r.key !== key));
+      await deleteRole(token, confirmTarget);
+      setRoles((prev) => prev.filter((r) => r.key !== confirmTarget));
+      toast({ type: 'success', title: 'Rol eliminado', description: `Se eliminó ${confirmTarget}.` });
+      setConfirmOpen(false);
+      setConfirmTarget(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No se pudo eliminar';
-      alert(msg);
+      toast({ type: 'error', title: 'Error', description: msg });
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -136,8 +156,8 @@ export default function RolesPage() {
         style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         {loading ? (
-          <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>
-            Cargando…
+          <div className="p-12 flex items-center justify-center">
+            <Loader size="lg" label="Cargando roles" />
           </div>
         ) : error ? (
           <div className="p-8 text-center text-red-500">{error}</div>
@@ -215,7 +235,7 @@ export default function RolesPage() {
                             <Edit size={16} />
                           </button>
                           <button
-                            onClick={() => onDelete(role.key)}
+                            onClick={() => requestDelete(role.key)}
                             className="p-2 rounded-lg transition-colors hover:bg-red-50"
                             style={{ color: '#ef4444' }}
                             title="Eliminar rol"
@@ -265,7 +285,7 @@ export default function RolesPage() {
                         <Edit size={16} />
                       </button>
                       <button
-                        onClick={() => onDelete(role.key)}
+                        onClick={() => requestDelete(role.key)}
                         className="p-2 rounded-lg transition-colors"
                         style={{ color: '#ef4444', border: '1px solid var(--border)' }}
                         title="Eliminar rol"
@@ -322,6 +342,26 @@ export default function RolesPage() {
         permissions={permissions}
         onSubmit={handleRoleSubmit}
         isSubmitting={submitting}
+      />
+
+      {/* Confirmación eliminar */}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Eliminar rol"
+        severity="danger"
+        description={
+          <div>
+            <p>¿Seguro que deseas eliminar el rol <strong>{confirmTarget}</strong>?</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Esta acción no se puede deshacer y podría afectar permisos de usuarios asociados.
+            </p>
+          </div>
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        loading={confirmLoading}
+        onCancel={() => { if (!confirmLoading) { setConfirmOpen(false); setConfirmTarget(null); } }}
+        onConfirm={confirmDelete}
       />
     </div>
   );
