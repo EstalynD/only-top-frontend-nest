@@ -14,8 +14,22 @@ export async function requestJSON<T>(path: string, init?: RequestInit): Promise<
     },
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    // Try to parse JSON error if provided by backend
+    const rawErr = await res.text();
+    type HttpError = Error & { status?: number; body?: unknown };
+    try {
+      const json = rawErr ? JSON.parse(rawErr) : undefined;
+      const msg = typeof json?.message === 'string' ? json.message : Array.isArray(json?.message) ? json.message.join(', ') : undefined;
+      const err: HttpError = new Error(msg || json?.error || `HTTP ${res.status}`);
+      err.status = res.status;
+      err.body = json ?? rawErr;
+      throw err as HttpError;
+    } catch {
+      const err: HttpError = new Error(rawErr || `HTTP ${res.status}`);
+      err.status = res.status;
+      err.body = rawErr;
+      throw err as HttpError;
+    }
   }
   // Manejar respuestas sin cuerpo (204/205/304 o 200 con body vacío)
   const status = res.status;

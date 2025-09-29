@@ -12,12 +12,51 @@ import {
   LogOut, 
   Settings,
   ChevronDown,
-  Bell
+  Bell,
+  Search,
+  Command
 } from 'lucide-react';
 
 type NavbarProps = {
   onMenuClick?: () => void;
 };
+
+type NotificationType = {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  isRead: boolean;
+  type: 'info' | 'success' | 'warning';
+};
+
+// Mock notifications - reemplaza con datos reales
+const mockNotifications: NotificationType[] = [
+  {
+    id: '1',
+    title: 'Sistema actualizado',
+    description: 'La aplicación se ha actualizado a la versión 1.0.0',
+    time: 'Hace 5 min',
+    isRead: false,
+    type: 'info'
+  },
+  {
+    id: '2',
+    title: 'Bienvenido a OnlyTop',
+    description: 'Tu cuenta ha sido configurada exitosamente',
+    time: 'Hace 1 hora',
+    isRead: false,
+    type: 'success'
+  },
+  {
+    id: '3',
+    title: 'Recordatorio',
+    description: 'Completa tu perfil para obtener mejor experiencia',
+    time: 'Hace 2 horas',
+    isRead: true,
+    type: 'warning'
+  }
+];
 
 export function Navbar({ onMenuClick }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
@@ -25,20 +64,52 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
-  const [profile, setProfile] = React.useState<{ username: string; displayName?: string | null; email?: string | null } | null>(null);
+  const [searchFocused, setSearchFocused] = React.useState(false);
+  const [profile, setProfile] = React.useState<{ 
+    username: string; 
+    displayName?: string | null; 
+    email?: string | null 
+  } | null>(null);
+  const [notifications, setNotifications] = React.useState<NotificationType[]>(mockNotifications);
+
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+  const notificationsRef = React.useRef<HTMLDivElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
   // Close dropdowns when clicking outside
   React.useEffect(() => {
-    const handleClickOutside = () => {
-      setUserMenuOpen(false);
-      setNotificationsOpen(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
     };
 
-    if (userMenuOpen || notificationsOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [userMenuOpen, notificationsOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K para abrir búsqueda
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      // Escape para cerrar menús
+      if (e.key === 'Escape') {
+        setUserMenuOpen(false);
+        setNotificationsOpen(false);
+        searchRef.current?.blur();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const logout = React.useCallback(() => {
     setToken(null);
@@ -57,7 +128,17 @@ export function Navbar({ onMenuClick }: NavbarProps) {
     setUserMenuOpen(false);
   };
 
-  // Cargar perfil para mostrar nombre y email en el navbar
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => prev.map(n => 
+      n.id === id ? { ...n, isRead: true } : n
+    ));
+  };
+
+  // Cargar perfil
   React.useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -81,6 +162,15 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
   const displayName = profile?.displayName || profile?.username || 'Usuario';
   const email = profile?.email || '';
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const getNotificationColor = (type: NotificationType['type']) => {
+    switch (type) {
+      case 'success': return '#10b981';
+      case 'warning': return '#f59e0b';
+      default: return 'var(--ot-blue-500)';
+    }
+  };
 
   return (
     <header
@@ -92,143 +182,271 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       }}
     >
       {/* Left section */}
-      <div className="flex items-center gap-4 min-w-0">
-        {/* Branding - always visible in top-left corner */}
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
-            style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
-          >
-            <span className="text-white font-bold text-sm">OT</span>
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-              OnlyTop
-            </h1>
-          </div>
-        </div>
-
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         {/* Mobile menu button */}
         <button
           type="button"
           aria-label="Abrir menú"
           onClick={onMenuClick}
-          className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-colors"
+          className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
           style={{ border: '1px solid var(--border)' }}
         >
           <Menu size={20} />
         </button>
 
-        {/* Breadcrumb or page title (desktop) */}
-        <div className="hidden lg:block">
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Dashboard
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Bienvenido al panel de control
-          </p>
+        {/* Branding */}
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition-transform duration-200 hover:scale-105"
+            style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+          >
+            <span className="text-white font-bold text-sm">OT</span>
+          </div>
+          <div className="hidden sm:block min-w-0">
+            <h1 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+              OnlyTop
+            </h1>
+            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+              Dashboard
+            </p>
+          </div>
+        </div>
+
+        {/* Search bar - Desktop */}
+        <div className="hidden md:flex flex-1 max-w-md ml-4">
+          <div 
+            className="relative w-full group"
+            style={{
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Search 
+              size={16} 
+              className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200"
+              style={{ 
+                color: searchFocused ? 'var(--ot-blue-500)' : 'var(--text-muted)' 
+              }}
+            />
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Buscar..."
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              className="w-full h-10 pl-10 pr-20 rounded-lg outline-none transition-all duration-200"
+              style={{
+                background: 'var(--background)',
+                border: `1.5px solid ${searchFocused ? 'var(--ot-blue-500)' : 'var(--border)'}`,
+                color: 'var(--text-primary)',
+                fontSize: '0.875rem'
+              }}
+            />
+            <div 
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded"
+              style={{ 
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                opacity: searchFocused ? 0 : 0.6
+              }}
+            >
+              <Command size={12} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>K</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        {/* Search button - Mobile */}
+        <button 
+          onClick={() => searchRef.current?.focus()}
+          className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{ border: '1px solid var(--border)' }}
+          aria-label="Buscar"
+        >
+          <Search size={18} />
+        </button>
+
         {/* Theme toggle */}
         <button 
           onClick={toggleTheme} 
-          className="inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-colors"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
           style={{ border: '1px solid var(--border)' }}
           aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          <div className="relative w-5 h-5">
+            <Sun 
+              size={18} 
+              className="absolute inset-0 transition-all duration-300"
+              style={{
+                transform: theme === 'dark' ? 'rotate(0deg) scale(1)' : 'rotate(90deg) scale(0)',
+                opacity: theme === 'dark' ? 1 : 0
+              }}
+            />
+            <Moon 
+              size={18} 
+              className="absolute inset-0 transition-all duration-300"
+              style={{
+                transform: theme === 'light' ? 'rotate(0deg) scale(1)' : 'rotate(-90deg) scale(0)',
+                opacity: theme === 'light' ? 1 : 0
+              }}
+            />
+          </div>
         </button>
 
         {/* Notifications */}
-        <div className="relative">
+        <div className="relative" ref={notificationsRef}>
           <button
             type="button"
             onClick={handleNotificationsClick}
-            className="relative inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-colors"
+            className="relative inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
             style={{ border: '1px solid var(--border)' }}
             aria-label="Notificaciones"
           >
-            <Bell size={18} />
-            {/* Notification badge */}
-            <span 
-              className="absolute -top-1 -right-1 w-3 h-3 rounded-full text-xs flex items-center justify-center"
-              style={{ background: '#ef4444', color: 'white' }}
-            >
-              <span className="sr-only">3 notificaciones nuevas</span>
-            </span>
+            <Bell size={18} className={notificationsOpen ? 'animate-pulse' : ''} />
+            {unreadCount > 0 && (
+              <span 
+                className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full text-xs font-medium flex items-center justify-center animate-pulse"
+                style={{ 
+                  background: '#ef4444', 
+                  color: 'white',
+                  fontSize: '0.625rem'
+                }}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Notifications dropdown */}
           {notificationsOpen && (
             <div
-              className="fixed sm:absolute inset-x-3 sm:inset-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 z-50 w-auto sm:w-96 rounded-xl shadow-xl py-2 ot-card border backdrop-blur-sm"
+              className="fixed sm:absolute inset-x-3 sm:inset-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 z-50 w-auto sm:w-96 rounded-xl shadow-2xl ot-card border backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200"
               style={{ 
                 background: 'var(--background)', 
                 borderColor: 'var(--border)',
-                maxHeight: '24rem',
-                overflowY: 'auto'
+                maxHeight: '28rem',
+                display: 'flex',
+                flexDirection: 'column'
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-4 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                <h3 className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-                  Notificaciones
-                </h3>
+              {/* Header */}
+              <div 
+                className="px-4 py-3 border-b flex items-center justify-between sticky top-0 z-10"
+                style={{ 
+                  borderColor: 'var(--border)',
+                  background: 'var(--background)'
+                }}
+              >
+                <div>
+                  <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                    Notificaciones
+                  </h3>
+                  {unreadCount > 0 && (
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {unreadCount} sin leer
+                    </p>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs px-2 py-1 rounded transition-colors duration-200"
+                    style={{ 
+                      color: 'var(--ot-blue-500)',
+                      background: 'transparent'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    Marcar todo
+                  </button>
+                )}
               </div>
-              <div className="py-2">
-                <div className="px-4 py-3 ot-hover-surface">
-                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Sistema actualizado
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    La aplicación se ha actualizado a la versión 1.0.0
-                  </p>
-                </div>
-                <div className="px-4 py-3 ot-hover-surface">
-                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Bienvenido a OnlyTop
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    Tu cuenta ha sido configurada exitosamente
-                  </p>
-                </div>
+
+              {/* Notifications list */}
+              <div className="overflow-y-auto flex-1">
+                {notifications.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <Bell size={32} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      No hay notificaciones
+                    </p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      onClick={() => markAsRead(notification.id)}
+                      className="px-4 py-3 border-b ot-hover-surface transition-all duration-200 cursor-pointer"
+                      style={{ 
+                        borderColor: 'var(--border)',
+                        opacity: notification.isRead ? 0.6 : 1
+                      }}
+                    >
+                      <div className="flex gap-3">
+                        <div 
+                          className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                          style={{ 
+                            background: notification.isRead ? 'transparent' : getNotificationColor(notification.type)
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {notification.title}
+                            </p>
+                            <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                              {notification.time}
+                            </span>
+                          </div>
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                            {notification.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* User menu */}
-        <div className="relative">
+        <div className="relative" ref={userMenuRef}>
           <button
             type="button"
             onClick={handleUserMenuClick}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg ot-hover-surface transition-colors"
+            className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-[1.02] active:scale-95"
             style={{ border: '1px solid var(--border)' }}
             aria-haspopup="menu"
             aria-expanded={userMenuOpen}
           >
             <div 
-              className="w-8 h-8 rounded-full flex items-center justify-center"
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-105"
               style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
             >
               <User size={16} className="text-white" />
             </div>
-            <div className="hidden sm:block text-left min-w-0">
+            <div className="hidden sm:block text-left min-w-0 max-w-[150px]">
               <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                 {displayName}
               </p>
               <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                {email || ' '}
+                {email || 'Sin correo'}
               </p>
             </div>
             <ChevronDown 
               size={16} 
-              className={`transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
-              style={{ color: 'var(--text-muted)' }}
+              className="transition-transform duration-200 hidden sm:block"
+              style={{ 
+                color: 'var(--text-muted)',
+                transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}
             />
           </button>
 
@@ -236,7 +454,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           {userMenuOpen && (
             <div
               role="menu"
-              className="fixed sm:absolute inset-x-3 sm:inset-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 z-50 w-auto sm:w-56 rounded-xl shadow-xl py-2 ot-card border backdrop-blur-sm"
+              className="fixed sm:absolute inset-x-3 sm:inset-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 z-50 w-auto sm:w-64 rounded-xl shadow-2xl ot-card border backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200"
               style={{ 
                 background: 'var(--background)', 
                 borderColor: 'var(--border)' 
@@ -244,44 +462,56 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               onClick={(e) => e.stopPropagation()}
             >
               {/* User info */}
-              <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {displayName}
-                </p>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {email || ' '}
-                </p>
+              <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+                  >
+                    <User size={20} className="text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                      {displayName}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                      {email || 'Sin correo'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Menu items */}
-              <div className="py-1">
+              <div className="py-2">
                 <button
                   role="menuitem"
-                  className="w-full flex items-center gap-3 px-4 py-2 text-sm ot-hover-surface transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm ot-hover-surface transition-all duration-200 group"
                   style={{ color: 'var(--text-primary)' }}
+                  onClick={() => router.push('/profile')}
                 >
-                  <User size={16} />
+                  <User size={16} className="transition-transform duration-200 group-hover:scale-110" />
                   <span>Mi perfil</span>
                 </button>
                 <button
                   role="menuitem"
-                  className="w-full flex items-center gap-3 px-4 py-2 text-sm ot-hover-surface transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm ot-hover-surface transition-all duration-200 group"
                   style={{ color: 'var(--text-primary)' }}
+                  onClick={() => router.push('/settings')}
                 >
-                  <Settings size={16} />
+                  <Settings size={16} className="transition-transform duration-200 group-hover:rotate-45" />
                   <span>Configuración</span>
                 </button>
               </div>
 
               {/* Logout */}
-              <div className="border-t py-1" style={{ borderColor: 'var(--border)' }}>
+              <div className="border-t py-2" style={{ borderColor: 'var(--border)' }}>
                 <button
                   role="menuitem"
                   onClick={logout}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-sm ot-hover-surface transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm ot-hover-surface transition-all duration-200 group"
                   style={{ color: '#ef4444' }}
                 >
-                  <LogOut size={16} />
+                  <LogOut size={16} className="transition-transform duration-200 group-hover:translate-x-1" />
                   <span>Cerrar sesión</span>
                 </button>
               </div>

@@ -36,31 +36,33 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     <ToastProvider>
       <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-background)', color: 'var(--color-foreground)' }}>
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
-        <div className="flex flex-1 relative">
-        {/* Sidebar desktop */}
-        <div className="hidden md:block">
-          <Sidebar variant="desktop" />
-        </div>
+        <div className="flex-1">
+          {/* Grid desktop: 18rem sidebar + contenido */}
+          <div className="hidden md:grid md:grid-cols-[18rem_1fr] md:gap-0">
+            <Sidebar variant="desktop" />
+            <main className="p-4">{children}</main>
+          </div>
 
-        {/* Sidebar móvil con overlay */}
-        {sidebarOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 md:hidden"
-              style={{ background: 'rgba(0,0,0,0.35)' }}
-              onClick={() => setSidebarOpen(false)}
-            />
-            <Sidebar
-              variant="mobile"
-              open={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-            />
-          </>
-        )}
+          {/* Stack móvil */}
+          <div className="md:hidden relative">
+            {/* Sidebar móvil con overlay */}
+            {sidebarOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 md:hidden"
+                  style={{ background: 'rgba(0,0,0,0.35)' }}
+                  onClick={() => setSidebarOpen(false)}
+                />
+                <Sidebar
+                  variant="mobile"
+                  open={sidebarOpen}
+                  onClose={() => setSidebarOpen(false)}
+                />
+              </>
+            )}
 
-        {/* Contenido */}
-          <div className="flex-1 p-4 md:ml-0">
-            {children}
+            {/* Contenido */}
+            <main className="p-4">{children}</main>
           </div>
         </div>
       </div>

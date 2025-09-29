@@ -220,7 +220,7 @@ export default function EmailConfigPage() {
       {/* Estado del servicio */}
       <Card>
         <div className="p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${form.enabled ? 'bg-green-100' : 'bg-gray-100'}`}>
                 {form.enabled ? (
@@ -241,7 +241,7 @@ export default function EmailConfigPage() {
             <Button
               onClick={handleToggleEnabled}
               variant={form.enabled ? 'danger' : 'success'}
-              className="px-4 py-2"
+              className="px-4 py-2 w-full sm:w-auto justify-center"
             >
               {form.enabled ? 'Deshabilitar' : 'Habilitar'}
             </Button>
@@ -354,13 +354,13 @@ export default function EmailConfigPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
             <Button
               type="button"
               onClick={handleVerify}
               disabled={verifying || !form.authUser || !form.authPass}
               variant="neutral"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <Shield size={16} />
               {verifying ? 'Verificando...' : 'Verificar Conexión'}
@@ -369,7 +369,7 @@ export default function EmailConfigPage() {
             <Button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <Settings size={16} />
               {saving ? 'Guardando...' : 'Guardar Configuración'}
@@ -389,8 +389,8 @@ export default function EmailConfigPage() {
               </h2>
             </div>
             
-            <div className="flex items-end gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+              <div className="flex-1 w-full">
                 <Input
                   label="Email de prueba"
                   type="email"
@@ -402,7 +402,7 @@ export default function EmailConfigPage() {
               <Button
                 onClick={handleTestEmail}
                 disabled={testing || !testEmailAddress || !form.enabled}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full sm:w-auto justify-center"
               >
                 <Mail size={16} />
                 {testing ? 'Enviando...' : 'Enviar Prueba'}
