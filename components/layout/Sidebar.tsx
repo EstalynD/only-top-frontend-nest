@@ -61,13 +61,6 @@ const NAV_ITEMS: NavItem[] = [
     disabled: true
   },
   { 
-    id: 'configuracion',
-    href: '/configuracion', 
-    label: 'Configuración',
-    icon: <Settings size={18} />,
-    disabled: true
-  },
-  { 
     id: 'mi-perfil',
     href: '/profile', 
     label: 'Mi perfil',
@@ -156,10 +149,34 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
     },
   ]), []);
 
+  // Dropdown: Configuración
+  const configChildren: NavItem[] = React.useMemo(() => ([
+    {
+      id: 'config-general',
+      href: '/configuracion',
+      label: 'General',
+      icon: <Settings size={16} />,
+    },
+    {
+      id: 'config-email',
+      href: '/configuracion/email',
+      label: 'Email',
+      icon: <Settings size={16} />,
+    },
+  ]), []);
+
   const grupoSistemaActivo = hasSystemAdmin && sistemaChildren.some((c) => isActive(c.href));
   const [sistemaOpen, setSistemaOpen] = React.useState<boolean>(false);
   React.useEffect(() => {
     if (grupoSistemaActivo) setSistemaOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  // Configuración dropdown state
+  const grupoConfigActivo = configChildren.some((c) => isActive(c.href));
+  const [configOpen, setConfigOpen] = React.useState<boolean>(false);
+  React.useEffect(() => {
+    if (grupoConfigActivo) setConfigOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
@@ -275,6 +292,56 @@ export function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarP
                 )}
               </div>
               )}
+
+              {/* Dropdown: Configuración */}
+              <div className="space-y-1 mb-2">
+                <button
+                  onClick={() => setConfigOpen((v) => !v)}
+                  className={`group w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    grupoConfigActivo ? 'shadow-sm' : 'ot-hover-surface hover:shadow-sm'
+                  }`}
+                  style={{
+                    background: grupoConfigActivo ? 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' : undefined,
+                    color: grupoConfigActivo ? '#ffffff' : 'var(--text-primary)',
+                  }}
+                  aria-expanded={configOpen}
+                  aria-controls="nav-config"
+                >
+                  <span className="flex items-center gap-3">
+                    <Settings size={18} />
+                    <span>Configuración</span>
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform ${configOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {configOpen && (
+                  <div id="nav-config" className="pl-3 space-y-1">
+                    {configChildren.map((child) => {
+                      const active = isActive(child.href);
+                      return (
+                        <Link
+                          key={child.id}
+                          href={child.href}
+                          onClick={(e) => handleNavClick(child, e)}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${
+                            active ? 'shadow-sm' : 'ot-hover-surface hover:shadow-sm'
+                          }`}
+                          style={{
+                            background: active ? 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' : undefined,
+                            color: active ? '#ffffff' : 'var(--text-primary)'
+                          }}
+                        >
+                          <span>{child.icon}</span>
+                          <span className="truncate">{child.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {NAV_ITEMS.map((item) => {
                 const isItemActive = isActive(item.href);
                 
