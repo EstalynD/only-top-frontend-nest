@@ -8,7 +8,7 @@ export type AuthUser = {
 export type LoginResponse = {
   token: string;
   expiresAt: number;
-  user: Pick<AuthUser, 'username'>;
+  user: Pick<AuthUser, 'id' | 'username' | 'roles' | 'permissions'>;
 };
 
-export type MeResponse = { user: Pick<AuthUser, 'username'> };
+export type MeResponse = { user: Pick<AuthUser, 'id' | 'username' | 'roles' | 'permissions'> };

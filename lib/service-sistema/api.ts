@@ -9,6 +9,9 @@ import type {
   ListTrmQuery,
   UpdateCurrencyRequest,
   UpdateTimezoneRequest,
+  UpdateTimeFormatRequest,
+  TimeFormat,
+  TimeFormatOption,
   CurrencyCode
 } from './types';
 
@@ -44,6 +47,29 @@ export function getSelectedTimezone(token: string) {
 
 export function updateTimezone(token: string, body: UpdateTimezoneRequest) {
   return requestJSON<Timezone>(SISTEMA_ROUTES.updateTimezone, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getAvailableTimeFormats(token: string) {
+  return requestJSON<TimeFormatOption[]>(SISTEMA_ROUTES.timeFormatsAvailable, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getSelectedTimeFormat(token: string) {
+  return requestJSON<TimeFormat>(SISTEMA_ROUTES.timeFormatsSelected, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function updateTimeFormat(token: string, body: UpdateTimeFormatRequest) {
+  return requestJSON<{ format: TimeFormat }>(SISTEMA_ROUTES.updateTimeFormat, {
     method: 'PUT',
     body: JSON.stringify(body),
     headers: { Authorization: `Bearer ${token}` },

@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Variant = 'primary' | 'success' | 'danger' | 'neutral';
+type Variant = 'primary' | 'success' | 'danger' | 'neutral' | 'secondary' | 'ghost';
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   full?: boolean;
@@ -14,6 +14,8 @@ export function Button({ className, full, variant = 'primary', style, ...props }
     success: 'linear-gradient(135deg, #10b981, #047857)', // verde sólido con fallback
     danger: 'linear-gradient(135deg, #ef4444, #b91c1c)',
     neutral: 'linear-gradient(135deg, var(--surface-muted), var(--border))',
+    secondary: 'linear-gradient(135deg, var(--surface), var(--border))',
+    ghost: 'transparent',
   };
 
   const baseStyle: React.CSSProperties = {

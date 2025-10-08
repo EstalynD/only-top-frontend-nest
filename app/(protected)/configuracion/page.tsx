@@ -12,12 +12,15 @@ import {
   getAvailableTimezones,
   getSelectedTimezone,
   updateTimezone,
+  getAvailableTimeFormats,
+  getSelectedTimeFormat,
+  updateTimeFormat,
   createTrm, 
   getCurrentTrm, 
   listTrm 
 } from '@/lib/service-sistema/api';
 import { formatCurrency, formatDate, normalizeEffectiveDate, validateTrmAmount } from '@/lib/service-sistema/helpers';
-import type { CurrencyFormatSpec, Timezone, TrmEntry, DisplayFormat, CurrencyCode } from '@/lib/service-sistema/types';
+import type { CurrencyFormatSpec, Timezone, TrmEntry, DisplayFormat, CurrencyCode, TimeFormat, TimeFormatOption } from '@/lib/service-sistema/types';
 import { 
   DollarSign, 
   Clock, 
@@ -39,6 +42,8 @@ export default function ConfiguracionPage() {
   const [currencies, setCurrencies] = React.useState<CurrencyFormatSpec[]>([]);
   const [availableTimezones, setAvailableTimezones] = React.useState<Timezone[]>([]);
   const [selectedTimezone, setSelectedTimezone] = React.useState<Timezone | null>(null);
+  const [availableTimeFormats, setAvailableTimeFormats] = React.useState<TimeFormatOption[]>([]);
+  const [selectedTimeFormat, setSelectedTimeFormat] = React.useState<TimeFormat>('24h');
   const [currentTrm, setCurrentTrm] = React.useState<TrmEntry | null>(null);
   const [trmHistory, setTrmHistory] = React.useState<TrmEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -53,6 +58,7 @@ export default function ConfiguracionPage() {
   });
   const [updatingCurrency, setUpdatingCurrency] = React.useState(false);
   const [updatingTimezone, setUpdatingTimezone] = React.useState(false);
+  const [updatingTimeFormat, setUpdatingTimeFormat] = React.useState(false);
   
   // Modal TRM
   const [showTrmModal, setShowTrmModal] = React.useState(false);
@@ -69,10 +75,12 @@ export default function ConfiguracionPage() {
     
     const loadData = async () => {
       try {
-        const [currenciesRes, availableTimezonesRes, selectedTimezoneRes, currentTrmRes, historyRes] = await Promise.all([
+        const [currenciesRes, availableTimezonesRes, selectedTimezoneRes, availableTimeFormatsRes, selectedTimeFormatRes, currentTrmRes, historyRes] = await Promise.all([
           getCurrencies(token),
           getAvailableTimezones(token),
           getSelectedTimezone(token),
+          getAvailableTimeFormats(token),
+          getSelectedTimeFormat(token),
           getCurrentTrm(token),
           listTrm(token, { limit: 10 })
         ]);
@@ -80,6 +88,8 @@ export default function ConfiguracionPage() {
         setCurrencies(currenciesRes);
         setAvailableTimezones(availableTimezonesRes);
         setSelectedTimezone(selectedTimezoneRes);
+        setAvailableTimeFormats(availableTimeFormatsRes);
+        setSelectedTimeFormat(selectedTimeFormatRes);
         setCurrentTrm(currentTrmRes);
         setTrmHistory(historyRes);
       } catch (error) {
@@ -158,6 +168,30 @@ export default function ConfiguracionPage() {
       });
     } finally {
       setUpdatingTimezone(false);
+    }
+  };
+
+  const handleTimeFormatChange = async (format: TimeFormat) => {
+    if (!token) return;
+
+    setUpdatingTimeFormat(true);
+    try {
+      await updateTimeFormat(token, { format });
+      setSelectedTimeFormat(format);
+      
+      toast({
+        type: 'success',
+        title: 'Formato de hora actualizado',
+        description: `Formato cambiado a ${format === '24h' ? '24 horas' : '12 horas (AM/PM)'}`
+      });
+    } catch (error) {
+      toast({
+        type: 'error',
+        title: 'Error al actualizar formato de hora',
+        description: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    } finally {
+      setUpdatingTimeFormat(false);
     }
   };
 
@@ -247,6 +281,46 @@ export default function ConfiguracionPage() {
   const copSpec = currencies.find(c => c.code === 'COP');
   // Nota: 'usdSpec' se removió porque no se utiliza actualmente
 
+  const timezoneLabel = selectedTimezone?.country ?? 'Sin configurar';
+  const timezoneDetails = selectedTimezone
+    ? `${selectedTimezone.code} • UTC ${selectedTimezone.utcOffset}`
+    : 'COT • UTC -05:00';
+  const timeFormatLabel = selectedTimeFormat === '24h' ? '24 horas' : '12 horas (AM/PM)';
+  const timeFormatDescription = selectedTimeFormat === '24h'
+    ? 'Formato de 24 horas (00:00 - 23:59)'
+    : 'Formato de 12 horas con AM/PM (12:00 AM - 11:59 PM)';
+  const totalCurrencies = currencies.length;
+  const activeCurrencies = currencies.filter(currency => currency.isActive).length;
+  const trmSummaryValue = currentTrm && copSpec
+    ? formatCurrency(currentTrm.copPerUsd, copSpec)
+    : 'Sin TRM';
+  const trmSummarySubtitle = currentTrm
+    ? `Vigente desde ${formatDate(currentTrm.effectiveAt)}`
+    : 'Crea el primer TRM para comenzar';
+  const summaryStyles = {
+    timezone: {
+      background: 'var(--surface)',
+      borderColor: 'var(--border)'
+    },
+    timeFormat: {
+      background: 'var(--surface)',
+      borderColor: 'var(--border)'
+    },
+    trm: {
+      background: 'var(--surface)',
+      borderColor: 'var(--border)'
+    }
+  } as const;
+  const neutralTileStyle = {
+    background: 'var(--surface)',
+    borderColor: 'var(--border)'
+  };
+  const highlightTileStyle = {
+    background: 'var(--surface)',
+    borderColor: 'var(--ot-blue-400)',
+    boxShadow: '0 0 0 1px rgba(59,130,246,0.35)'
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -259,6 +333,93 @@ export default function ConfiguracionPage() {
         </p>
       </div>
 
+      {/* Resumen rápido */}
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Card>
+          <div className="p-5 rounded-xl border" style={summaryStyles.timezone}>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <span
+                  className="p-2 rounded-lg"
+                  style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--ot-blue-600)' }}
+                >
+                  <Globe size={18} />
+                </span>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                    Zona horaria activa
+                  </p>
+                  <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {timezoneLabel}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.28)', color: 'var(--ot-blue-600)' }}>
+                {availableTimezones.length} opciones
+              </span>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{timezoneDetails}</p>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="p-5 rounded-xl border" style={summaryStyles.timeFormat}>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <span
+                  className="p-2 rounded-lg"
+                  style={{ background: 'rgba(129,140,248,0.18)', color: 'var(--ot-purple-600)' }}
+                >
+                  <Clock size={18} />
+                </span>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                    Formato de hora
+                  </p>
+                  <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {timeFormatLabel}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: 'rgba(129,140,248,0.14)', border: '1px solid rgba(129,140,248,0.28)', color: 'var(--ot-purple-600)' }}>
+                {availableTimeFormats.length} estilos
+              </span>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{timeFormatDescription}</p>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="p-5 rounded-xl border h-full" style={summaryStyles.trm}>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <span
+                  className="p-2 rounded-lg"
+                  style={{ background: 'rgba(16,185,129,0.18)', color: 'var(--ot-green-600)' }}
+                >
+                  <TrendingUp size={18} />
+                </span>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                    TRM actual
+                  </p>
+                  <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {trmSummaryValue}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: 'rgba(16,185,129,0.16)', border: '1px solid rgba(16,185,129,0.32)', color: 'var(--ot-green-600)' }}>
+                {currentTrm ? 'Activo' : 'Pendiente'}
+              </span>
+            </div>
+            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              <Calendar size={14} />
+              {trmSummarySubtitle}
+            </p>
+          </div>
+        </Card>
+      </section>
+
       {/* Monedas */}
       <Card>
         <div className="p-6">
@@ -269,48 +430,79 @@ export default function ConfiguracionPage() {
                 Monedas Soportadas
               </h2>
             </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded-full" style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--text-secondary)' }}>
+                {activeCurrencies} activas
+              </span>
+              <span className="px-2 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-secondary)' }}>
+                {totalCurrencies} totales
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currencies.map((currency) => (
               <div 
                 key={currency.code}
-                className="p-4 rounded-lg border"
+                className="p-5 rounded-xl border transition-shadow hover:shadow-md"
                 style={{ 
-                  background: 'var(--surface-muted)', 
+                  background: 'linear-gradient(135deg, var(--surface-muted), rgba(59, 130, 246, 0.05))', 
                   borderColor: 'var(--border)' 
                 }}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                    {currency.code}
-                  </span>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                      Código
+                    </p>
+                    <p className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {currency.code}
+                    </p>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm px-2 py-1 rounded" style={{ 
-                      background: 'var(--ot-blue-100)', 
-                      color: 'var(--ot-blue-700)' 
+                    <span className="text-sm px-2 py-1 rounded border" style={{ 
+                      background: 'rgba(59,130,246,0.15)', 
+                      borderColor: 'rgba(59,130,246,0.3)',
+                      color: 'var(--ot-blue-600)'
                     }}>
                       {currency.symbol}
                     </span>
-                    <button
-                      onClick={() => handleEditCurrency(currency)}
-                      className="p-1 rounded hover:bg-gray-100 transition-colors"
-                      title="Editar configuración"
-                    >
-                      <Edit3 size={14} style={{ color: 'var(--text-muted)' }} />
-                    </button>
+                    <span className="text-xs px-2 py-1 rounded-full" style={{
+                      background: currency.isActive ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: currency.isActive ? 'var(--ot-green-600)' : 'var(--ot-red-600)',
+                      border: `1px solid ${currency.isActive ? 'rgba(34,197,94,0.28)' : 'rgba(239,68,68,0.28)'}`
+                    }}>
+                      {currency.isActive ? 'Activa' : 'Inactiva'}
+                    </span>
                   </div>
                 </div>
-                <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
-                  Ejemplo: {currency.sample}
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Ejemplo: <span className="font-semibold" style={{ color: 'var(--ot-blue-600)' }}>{currency.sample}</span>
                 </p>
-                <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <span>Decimales: {currency.minimumFractionDigits}-{currency.maximumFractionDigits}</span>
+                <div className="flex items-center justify-between text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+                  <span>Decimales permitidos</span>
+                  <span className="font-medium">{currency.minimumFractionDigits} - {currency.maximumFractionDigits}</span>
+                </div>
+                <div className="flex items-center justify-between mt-4">
                   <span className="px-2 py-1 rounded text-xs" style={{
-                    background: currency.displayFormat === 'CODE_SYMBOL' ? 'var(--ot-green-100)' : 'var(--ot-yellow-100)',
-                    color: currency.displayFormat === 'CODE_SYMBOL' ? 'var(--ot-green-700)' : 'var(--ot-yellow-700)'
+                    background: currency.displayFormat === 'CODE_SYMBOL' ? 'rgba(34,197,94,0.15)' : 'rgba(251,191,36,0.18)',
+                    color: currency.displayFormat === 'CODE_SYMBOL' ? 'var(--ot-green-600)' : 'var(--ot-yellow-700)',
+                    border: `1px solid ${currency.displayFormat === 'CODE_SYMBOL' ? 'rgba(34,197,94,0.28)' : 'rgba(251,191,36,0.35)'}`
                   }}>
                     {currency.displayFormat === 'CODE_SYMBOL' ? 'Código + Símbolo' : 'Solo Símbolo'}
                   </span>
+                  <button
+                    onClick={() => handleEditCurrency(currency)}
+                    className="flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    style={{
+                      background: 'var(--surface)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border)'
+                    }}
+                    title="Editar configuración"
+                  >
+                    <Edit3 size={14} style={{ color: 'var(--ot-blue-500)' }} />
+                    Editar
+                  </button>
                 </div>
               </div>
             ))}
@@ -328,14 +520,14 @@ export default function ConfiguracionPage() {
             </h2>
           </div>
           
-          <div className="mb-4 p-4 rounded-lg" style={{ background: 'var(--ot-blue-50)', borderColor: 'var(--ot-blue-200)' }}>
+          <div className="mb-4 p-4 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
             <div className="flex items-center gap-2 mb-2">
-              <Check size={16} style={{ color: 'var(--ot-blue-600)' }} />
-              <span className="font-medium" style={{ color: 'var(--ot-blue-800)' }}>
+              <Check size={16} style={{ color: 'var(--ot-blue-500)' }} />
+              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
                 Zona horaria activa: {selectedTimezone?.country || 'Colombia'}
               </span>
             </div>
-            <p className="text-sm" style={{ color: 'var(--ot-blue-700)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {selectedTimezone ? `${selectedTimezone.code} (UTC ${selectedTimezone.utcOffset})` : 'COT (UTC -05:00)'}
             </p>
           </div>
@@ -350,18 +542,11 @@ export default function ConfiguracionPage() {
                   key={tz.iana}
                   onClick={() => handleTimezoneChange(tz.country as 'Colombia' | 'Peru')}
                   disabled={updatingTimezone || selectedTimezone?.country === tz.country}
-                  className={`p-4 rounded-lg border text-left transition-all ${
-                    selectedTimezone?.country === tz.country
-                      ? 'border-blue-500 shadow-sm'
-                      : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  style={{ 
-                    background: selectedTimezone?.country === tz.country 
-                      ? 'var(--ot-blue-50)' 
-                      : 'var(--surface-muted)',
-                    borderColor: selectedTimezone?.country === tz.country 
-                      ? 'var(--ot-blue-500)' 
-                      : 'var(--border)'
+                  className={`p-4 rounded-lg border text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    selectedTimezone?.country === tz.country ? 'shadow-md' : 'hover:shadow-sm'
+                  }`}
+                  style={{
+                    ...(selectedTimezone?.country === tz.country ? highlightTileStyle : neutralTileStyle)
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -369,13 +554,14 @@ export default function ConfiguracionPage() {
                       {tz.country}
                     </span>
                     <div className="flex items-center gap-2">
-                      {selectedTimezone?.country === tz.country && (
-                        <Check size={16} style={{ color: 'var(--ot-blue-600)' }} />
-                      )}
-                      <span className="text-sm px-2 py-1 rounded" style={{ 
-                        background: 'var(--ot-blue-100)', 
-                        color: 'var(--ot-blue-700)' 
-                      }}>
+                        {selectedTimezone?.country === tz.country && (
+                          <Check size={16} style={{ color: 'var(--ot-blue-500)' }} />
+                        )}
+                        <span className="text-sm px-2 py-1 rounded border" style={{ 
+                          background: 'rgba(255,255,255,0.12)', 
+                          borderColor: 'rgba(255,255,255,0.18)',
+                          color: 'var(--text-primary)'
+                        }}>
                         {tz.code}
                       </span>
                     </div>
@@ -390,6 +576,82 @@ export default function ConfiguracionPage() {
               ))}
             </div>
           </div>
+          <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
+            La zona horaria define cómo se mostrarán todas las fechas y horas para tu equipo. Los cambios se aplican de inmediato.
+          </p>
+        </div>
+      </Card>
+
+      {/* Formato de Hora */}
+      <Card>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Clock size={20} style={{ color: 'var(--ot-blue-500)' }} />
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Formato de Hora del Sistema
+            </h2>
+          </div>
+          
+          <div className="mb-4 p-4 rounded-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Check size={16} style={{ color: 'var(--ot-blue-500)' }} />
+              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                Formato activo: {selectedTimeFormat === '24h' ? '24 horas' : '12 horas (AM/PM)'}
+              </span>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {selectedTimeFormat === '24h' 
+                ? 'Formato de 24 horas (00:00 - 23:59)' 
+                : 'Formato de 12 horas con AM/PM (12:00 AM - 11:59 PM)'
+              }
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              Seleccionar formato de hora:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {availableTimeFormats.map((format) => {
+                const isSelected = selectedTimeFormat === format.format;
+                const isDisabled = updatingTimeFormat || isSelected;
+                return (
+                  <div
+                    key={format.format}
+                    onClick={() => !isDisabled && handleTimeFormatChange(format.format)}
+                    className={`p-4 rounded-lg border text-left transition-all cursor-pointer ${
+                      isSelected ? 'shadow-md' : 'hover:shadow-sm'
+                    } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={isSelected ? highlightTileStyle : neutralTileStyle}
+                  >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {format.label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {isSelected && (
+                        <Check size={16} style={{ color: 'var(--ot-blue-500)' }} />
+                      )}
+                      <span className="text-sm px-2 py-1 rounded border" style={{ 
+                        background: 'rgba(255,255,255,0.12)', 
+                        borderColor: 'rgba(255,255,255,0.18)',
+                        color: 'var(--text-primary)'
+                      }}>
+                        {format.format}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    {format.description}
+                  </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
+            El formato seleccionado se aplicará a todas las interfaces que muestren horarios. Puedes cambiarlo cuando lo necesites.
+          </p>
         </div>
       </Card>
 

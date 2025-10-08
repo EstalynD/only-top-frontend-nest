@@ -14,6 +14,8 @@ export interface Shift {
   timeSlot: TimeSlot;
   description?: string;
   isActive: boolean;
+  assignedAreas?: string[]; // IDs de áreas asignadas al turno
+  assignedCargos?: string[]; // IDs de cargos asignados al turno
 }
 
 export interface FixedSchedule {
@@ -24,6 +26,10 @@ export interface FixedSchedule {
   friday: TimeSlot;
   saturday?: TimeSlot;
   sunday?: TimeSlot;
+  lunchBreakEnabled?: boolean;
+  lunchBreak?: TimeSlot;
+  assignedAreas?: string[]; // IDs de áreas asignadas al horario fijo
+  assignedCargos?: string[]; // IDs de cargos asignados al horario fijo
 }
 
 export interface AttendanceConfig {
@@ -40,6 +46,7 @@ export interface AttendanceConfig {
   timezone?: string;
   description?: string;
   updatedBy?: string;
+  attendanceEnabledFrom?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,6 +62,7 @@ export interface UpdateAttendanceConfigRequest {
   overtimeEnabled?: boolean;
   timezone?: string;
   description?: string;
+  attendanceEnabledFrom?: string | null;
 }
 
 export interface CreateShiftRequest {
@@ -63,6 +71,8 @@ export interface CreateShiftRequest {
   timeSlot: TimeSlot;
   description?: string;
   isActive?: boolean;
+  assignedAreas?: string[];
+  assignedCargos?: string[];
 }
 
 export interface UpdateShiftRequest {
@@ -71,6 +81,8 @@ export interface UpdateShiftRequest {
   timeSlot?: TimeSlot;
   description?: string;
   isActive?: boolean;
+  assignedAreas?: string[];
+  assignedCargos?: string[];
 }
 
 export interface ShiftDurationResponse {
@@ -80,8 +92,34 @@ export interface ShiftDurationResponse {
   formattedDuration: string;
 }
 
+export interface ShiftAssignmentsResponse {
+  assignedAreas: string[];
+  assignedCargos: string[];
+}
+
+export interface AssignAreasRequest {
+  areaIds: string[];
+}
+
+export interface AssignCargosRequest {
+  cargoIds: string[];
+}
+
+export interface FixedScheduleAssignmentsResponse {
+  assignedAreas: string[];
+  assignedCargos: string[];
+}
+
+export interface AssignToFixedScheduleRequest {
+  areaIds?: string[];
+  cargoIds?: string[];
+}
+
+export type ScheduleType = 'FIXED' | 'ROTATING';
+
 const ATTENDANCE_ROUTES = {
   config: '/sistema/attendance/config',
+  attendanceEnabledFrom: '/sistema/attendance/enabled-from',
   activeShifts: '/sistema/attendance/shifts/active',
   shiftByType: (type: string) => `/sistema/attendance/shifts/by-type/${type}`,
   shifts: '/sistema/attendance/shifts',
@@ -90,6 +128,22 @@ const ATTENDANCE_ROUTES = {
   calculateDuration: '/sistema/attendance/calculate-duration',
   toggleFixedSchedule: '/sistema/attendance/fixed-schedule/toggle',
   toggleRotatingShifts: '/sistema/attendance/rotating-shifts/toggle',
+  // Area and Cargo assignments
+  assignAreas: (shiftId: string) => `/sistema/attendance/shifts/${shiftId}/assign-areas`,
+  assignCargos: (shiftId: string) => `/sistema/attendance/shifts/${shiftId}/assign-cargos`,
+  removeArea: (shiftId: string, areaId: string) => `/sistema/attendance/shifts/${shiftId}/areas/${areaId}`,
+  removeCargo: (shiftId: string, cargoId: string) => `/sistema/attendance/shifts/${shiftId}/cargos/${cargoId}`,
+  shiftAssignments: (shiftId: string) => `/sistema/attendance/shifts/${shiftId}/assignments`,
+  shiftsByArea: (areaId: string) => `/sistema/attendance/shifts/by-area/${areaId}`,
+  shiftsByCargo: (cargoId: string) => `/sistema/attendance/shifts/by-cargo/${cargoId}`,
+  // Fixed schedule assignments
+  fixedScheduleAssignments: '/sistema/attendance/fixed-schedule/assignments',
+  assignToFixedSchedule: '/sistema/attendance/fixed-schedule/assign',
+  removeAreaFromFixed: (areaId: string) => `/sistema/attendance/fixed-schedule/areas/${areaId}`,
+  removeCargoFromFixed: (cargoId: string) => `/sistema/attendance/fixed-schedule/cargos/${cargoId}`,
+  // Unified assignment methods
+  assignmentsByType: (scheduleType: string) => `/sistema/attendance/assignments/${scheduleType}`,
+  assignByType: (scheduleType: string) => `/sistema/attendance/assign/${scheduleType}`,
 } as const;
 
 // === ATTENDANCE CONFIGURATION ===
@@ -102,10 +156,27 @@ export function getAttendanceConfig(token: string) {
 }
 
 export function updateAttendanceConfig(token: string, data: UpdateAttendanceConfigRequest) {
-  const sanitized = deepOmitId(data);
+  const sanitized = deepOmitKeys(data, ['_id', 'assignedAreas', 'assignedCargos']);
   return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.config, {
     method: 'PUT',
     body: JSON.stringify(sanitized),
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+// === ENABLED-FROM MANAGEMENT ===
+export function getAttendanceEnabledFrom(token: string) {
+  return requestJSON<{ attendanceEnabledFrom: string | null }>(ATTENDANCE_ROUTES.attendanceEnabledFrom, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function setAttendanceEnabledFrom(token: string, attendanceEnabledFrom: string | null) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.attendanceEnabledFrom, {
+    method: 'PUT',
+    body: JSON.stringify({ attendanceEnabledFrom }),
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
@@ -119,6 +190,21 @@ function deepOmitId<T>(obj: T): T {
     for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
       if (k === '_id') continue;
       clone[k] = deepOmitId(v);
+    }
+    return clone as T;
+  }
+  return obj;
+}
+
+// El backend usa ValidationPipe con whitelist/forbidNonWhitelisted. No permite assignedAreas/assignedCargos en UpdateAttendanceConfigDto.
+function deepOmitKeys<T>(obj: T, keys: string[]): T {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map((i) => deepOmitKeys(i, keys)) as unknown as T;
+  if (typeof obj === 'object') {
+    const clone: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (keys.includes(k)) continue;
+      clone[k] = deepOmitKeys(v, keys);
     }
     return clone as T;
   }
@@ -199,6 +285,137 @@ export function toggleRotatingShifts(token: string, enabled: boolean) {
   return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.toggleRotatingShifts, {
     method: 'POST',
     body: JSON.stringify({ enabled }),
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+// === AREA AND CARGO ASSIGNMENTS ===
+
+export function assignAreasToShift(token: string, shiftId: string, data: AssignAreasRequest) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.assignAreas(shiftId), {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function assignCargosToShift(token: string, shiftId: string, data: AssignCargosRequest) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.assignCargos(shiftId), {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function removeAreaFromShift(token: string, shiftId: string, areaId: string) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.removeArea(shiftId, areaId), {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function removeCargoFromShift(token: string, shiftId: string, cargoId: string) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.removeCargo(shiftId, cargoId), {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getShiftAssignments(token: string, shiftId: string) {
+  return requestJSON<ShiftAssignmentsResponse>(ATTENDANCE_ROUTES.shiftAssignments(shiftId), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getShiftsByArea(token: string, areaId: string) {
+  return requestJSON<Shift[]>(ATTENDANCE_ROUTES.shiftsByArea(areaId), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getShiftsByCargo(token: string, cargoId: string) {
+  return requestJSON<Shift[]>(ATTENDANCE_ROUTES.shiftsByCargo(cargoId), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+// === FIXED SCHEDULE ASSIGNMENTS ===
+
+export function getFixedScheduleAssignments(token: string) {
+  return requestJSON<FixedScheduleAssignmentsResponse>(ATTENDANCE_ROUTES.fixedScheduleAssignments, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function assignToFixedSchedule(token: string, data: AssignToFixedScheduleRequest) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.assignToFixedSchedule, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function removeAreaFromFixedSchedule(token: string, areaId: string) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.removeAreaFromFixed(areaId), {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function removeCargoFromFixedSchedule(token: string, cargoId: string) {
+  return requestJSON<AttendanceConfig>(ATTENDANCE_ROUTES.removeCargoFromFixed(cargoId), {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+// === UNIFIED ASSIGNMENT METHODS ===
+
+export function getAssignmentsByScheduleType(token: string, scheduleType: ScheduleType, shiftId?: string) {
+  const url = scheduleType === 'FIXED' 
+    ? ATTENDANCE_ROUTES.fixedScheduleAssignments
+    : ATTENDANCE_ROUTES.shiftAssignments(shiftId!);
+    
+  return requestJSON<ShiftAssignmentsResponse | FixedScheduleAssignmentsResponse>(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function assignByScheduleType(token: string, scheduleType: ScheduleType, data: AssignToFixedScheduleRequest | AssignAreasRequest | AssignCargosRequest, shiftId?: string) {
+  let url: string;
+  let body: any;
+  
+  if (scheduleType === 'FIXED') {
+    url = ATTENDANCE_ROUTES.assignToFixedSchedule;
+    body = data;
+  } else {
+    if ('areaIds' in data) {
+      url = ATTENDANCE_ROUTES.assignAreas(shiftId!);
+      body = data;
+    } else if ('cargoIds' in data) {
+      url = ATTENDANCE_ROUTES.assignCargos(shiftId!);
+      body = data;
+    } else {
+      throw new Error('Invalid data for rotating schedule assignment');
+    }
+  }
+  
+  return requestJSON<AttendanceConfig>(url, {
+    method: 'POST',
+    body: JSON.stringify(body),
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
@@ -300,7 +517,7 @@ export function getShiftTypeIcon(type: ShiftType): string {
   }
 }
 
-export function getDayName(day: keyof FixedSchedule): string {
+export function getDayName(day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'): string {
   const dayNames = {
     monday: 'Lunes',
     tuesday: 'Martes',
@@ -340,6 +557,130 @@ export function validateShift(shift: CreateShiftRequest | UpdateShiftRequest): s
         errors.push('La duración del turno no puede exceder 12 horas');
       }
     }
+  }
+  
+  return errors;
+}
+
+// === ASSIGNMENT UTILITIES ===
+
+export function hasAreaAssigned(shift: Shift, areaId: string): boolean {
+  return shift.assignedAreas?.includes(areaId) ?? false;
+}
+
+export function hasCargoAssigned(shift: Shift, cargoId: string): boolean {
+  return shift.assignedCargos?.includes(cargoId) ?? false;
+}
+
+export function getAssignedAreasCount(shift: Shift): number {
+  return shift.assignedAreas?.length ?? 0;
+}
+
+export function getAssignedCargosCount(shift: Shift): number {
+  return shift.assignedCargos?.length ?? 0;
+}
+
+export function formatAssignmentsSummary(shift: Shift): string {
+  const areasCount = getAssignedAreasCount(shift);
+  const cargosCount = getAssignedCargosCount(shift);
+  
+  if (areasCount === 0 && cargosCount === 0) {
+    return 'Sin asignaciones';
+  }
+  
+  const parts: string[] = [];
+  if (areasCount > 0) {
+    parts.push(`${areasCount} área${areasCount > 1 ? 's' : ''}`);
+  }
+  if (cargosCount > 0) {
+    parts.push(`${cargosCount} cargo${cargosCount > 1 ? 's' : ''}`);
+  }
+  
+  return parts.join(', ');
+}
+
+export function validateAssignments(areaIds: string[], cargoIds: string[]): string[] {
+  const errors: string[] = [];
+  
+  if (!Array.isArray(areaIds)) {
+    errors.push('Los IDs de áreas deben ser un array');
+  }
+  
+  if (!Array.isArray(cargoIds)) {
+    errors.push('Los IDs de cargos deben ser un array');
+  }
+  
+  if (areaIds.length === 0 && cargoIds.length === 0) {
+    errors.push('Debe asignar al menos un área o cargo');
+  }
+  
+  return errors;
+}
+
+// === FIXED SCHEDULE UTILITIES ===
+
+export function hasAreaAssignedToFixed(fixedSchedule: FixedSchedule | undefined | null, areaId: string): boolean {
+  return fixedSchedule?.assignedAreas?.includes(areaId) ?? false;
+}
+
+export function hasCargoAssignedToFixed(fixedSchedule: FixedSchedule | undefined | null, cargoId: string): boolean {
+  return fixedSchedule?.assignedCargos?.includes(cargoId) ?? false;
+}
+
+export function getFixedScheduleAssignmentsCount(fixedSchedule: FixedSchedule | undefined | null): { areas: number; cargos: number } {
+  return {
+    areas: fixedSchedule?.assignedAreas?.length ?? 0,
+    cargos: fixedSchedule?.assignedCargos?.length ?? 0
+  };
+}
+
+export function formatFixedScheduleAssignmentsSummary(fixedSchedule: FixedSchedule | undefined | null): string {
+  const counts = getFixedScheduleAssignmentsCount(fixedSchedule);
+  
+  if (counts.areas === 0 && counts.cargos === 0) {
+    return 'Sin asignaciones';
+  }
+  
+  const parts: string[] = [];
+  if (counts.areas > 0) {
+    parts.push(`${counts.areas} área${counts.areas > 1 ? 's' : ''}`);
+  }
+  if (counts.cargos > 0) {
+    parts.push(`${counts.cargos} cargo${counts.cargos > 1 ? 's' : ''}`);
+  }
+  
+  return parts.join(', ');
+}
+
+// === UNIFIED UTILITIES ===
+
+export function getScheduleTypeDisplayName(scheduleType: ScheduleType): string {
+  switch (scheduleType) {
+    case 'FIXED':
+      return 'Horario Fijo';
+    case 'ROTATING':
+      return 'Turnos Rotativos';
+    default:
+      return 'Desconocido';
+  }
+}
+
+export function getScheduleTypeIcon(scheduleType: ScheduleType): string {
+  switch (scheduleType) {
+    case 'FIXED':
+      return '🕐'; // Clock
+    case 'ROTATING':
+      return '🔄'; // Rotating arrows
+    default:
+      return '❓'; // Question mark
+  }
+}
+
+export function validateScheduleTypeAssignment(scheduleType: ScheduleType, shiftId?: string): string[] {
+  const errors: string[] = [];
+  
+  if (scheduleType === 'ROTATING' && !shiftId) {
+    errors.push('El ID del turno es requerido para turnos rotativos');
   }
   
   return errors;

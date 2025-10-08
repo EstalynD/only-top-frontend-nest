@@ -22,6 +22,18 @@ export type UpdateTimezoneRequest = {
   timezone: 'Colombia' | 'Peru';
 };
 
+export type TimeFormat = '12h' | '24h';
+
+export type TimeFormatOption = {
+  format: TimeFormat;
+  label: string;
+  description: string;
+};
+
+export type UpdateTimeFormatRequest = {
+  format: TimeFormat;
+};
+
 export type Timezone = {
   country: string;
   code: string;

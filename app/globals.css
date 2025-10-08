@@ -5,9 +5,26 @@
   /* Paleta corporativa */
   --ot-black: #18181b; /* zinc-900 */
   --ot-blue-500: #1c41d9;
+  --ot-blue-600: #1c3fb8;
   --ot-blue-700: #1e338a;
+  --ot-blue-50: #eff6ff;
   --ot-white: #f9fafb;
   --ot-muted: #a1a1aa;
+  
+  /* Colores adicionales para el sistema */
+  --ot-pink-500: #ec4899;
+  --ot-pink-600: #db2777;
+  --ot-pink-50: #fdf2f8;
+  --ot-green-500: #10b981;
+  --ot-green-600: #059669;
+  --ot-green-50: #d1fae5;
+  --ot-purple-500: #8b5cf6;
+  --ot-purple-600: #7c3aed;
+  --ot-purple-50: #faf5ff;
+  --ot-orange-500: #f97316;
+  --ot-orange-600: #ea580c;
+  --ot-orange-50: #fff7ed;
+  --ot-gray-600: #4b5563;
 
   /* Fondo por defecto (claro) */
   --background: #f7f9fc; /* claro corporativo suave */
@@ -104,9 +121,21 @@ body {
   --surface-muted: #eef2ff;
   --border: #e5e7eb;
   --text-primary: var(--ot-black);
+  --text-secondary: #4b5563;
   --text-muted: var(--ot-muted);
   --input-bg: #ffffff;
   --input-border: #dbe2f1;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --hover-bg: #f9fafb;
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Select (light) */
+  --ot-select-bg: var(--input-bg);
+  --ot-select-panel: var(--surface);
+  --ot-select-input: var(--input-bg);
+  --ot-select-hover: var(--surface-muted);
 }
 
 [data-theme="dark"] {
@@ -116,10 +145,63 @@ body {
   --surface-muted: rgba(255,255,255,0.08);
   --border: rgba(255,255,255,0.14);
   --text-primary: var(--ot-white);
-  --text-muted: var(--ot-muted);
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
   --input-bg: rgba(255,255,255,0.06);
   --input-border: rgba(255,255,255,0.2);
+  --card-bg: rgba(255,255,255,0.05);
+  --card-border: rgba(255,255,255,0.1);
+  --hover-bg: rgba(255,255,255,0.08);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+
+  /* Select (dark) - fondos sólidos para evitar transparencia */
+  /* Panel y botón del select */
+  --ot-select-bg: #0f172a;        /* slate-900 */
+  --ot-select-panel: #0f172a;     /* sólido, encima de background */
+  --ot-select-input: #0f172a;     /* buscador interno */
+  --ot-select-hover: #111827;     /* slate-900 un poco más claro */
 }
 
 /* Hover utilitario basado en superficie */
 .ot-hover-surface:hover { background: var(--surface-muted); }
+
+/* Utilidades de tema */
+.ot-theme-bg { background: var(--background); }
+.ot-theme-surface { background: var(--surface); }
+.ot-theme-card { background: var(--card-bg); border: 1px solid var(--card-border); }
+.ot-theme-text { color: var(--text-primary); }
+.ot-theme-text-secondary { color: var(--text-secondary); }
+.ot-theme-text-muted { color: var(--text-muted); }
+.ot-theme-border { border-color: var(--border); }
+.ot-theme-shadow { box-shadow: var(--shadow); }
+.ot-theme-shadow-lg { box-shadow: var(--shadow-lg); }
+
+/* Transiciones suaves para cambios de tema */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Mejoras para el tema oscuro */
+[data-theme="dark"] {
+  /* Scrollbar personalizado para tema oscuro */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

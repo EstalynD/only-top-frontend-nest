@@ -16,6 +16,7 @@ import {
   Search,
   Command
 } from 'lucide-react';
+import { RealTimeClock } from '@/components/ui/RealTimeClock';
 
 type NavbarProps = {
   onMenuClick?: () => void;
@@ -267,6 +268,17 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         >
           <Search size={18} />
         </button>
+
+        {/* Real-time clock */}
+        <div 
+          className="hidden lg:flex items-center px-3 py-2 rounded-lg"
+          style={{ 
+            background: 'var(--surface-muted)', 
+            border: '1px solid var(--border)' 
+          }}
+        >
+          <RealTimeClock showIcon={true} />
+        </div>
 
         {/* Theme toggle */}
         <button 

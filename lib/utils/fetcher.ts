@@ -1,17 +1,32 @@
 import { API_BASE } from '../config';
 
 export function base(path: string) {
-  return `${API_BASE}${path}`;
+  // Asegura una sola barra entre BASE y path
+  const base = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
+/**
+ * Tipo para respuestas envueltas del backend
+ */
+interface WrappedResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
 }
 
 export async function requestJSON<T>(path: string, init?: RequestInit): Promise<T> {
-  // Asegurar que 'Content-Type: application/json' no se pierda cuando se pasan headers en init
+  // Si el body es FormData no debemos fijar 'Content-Type' (el navegador lo gestiona con boundary)
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+
+  const headers = isFormData
+    ? { ...(init?.headers || {}) }
+    : { 'Content-Type': 'application/json', ...(init?.headers || {}) };
+
   const res = await fetch(base(path), {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
+    headers,
   });
   if (!res.ok) {
     // Try to parse JSON error if provided by backend
@@ -41,7 +56,16 @@ export async function requestJSON<T>(path: string, init?: RequestInit): Promise<
     return null as unknown as T;
   }
   try {
-    return JSON.parse(raw) as T;
+    const parsed = JSON.parse(raw);
+    
+    // Si la respuesta tiene estructura { success: true, data: ... }, desenvolver
+    if (parsed && typeof parsed === 'object' && 'success' in parsed && 'data' in parsed) {
+      const wrapped = parsed as WrappedResponse<T>;
+      return wrapped.data as T;
+    }
+    
+    // Si no está envuelta, devolver directamente
+    return parsed as T;
   } catch {
     // Si el servidor respondió con texto no JSON pero exitoso, exponerlo por si es útil
     // Mantener compatibilidad devolviendo cualquier string como unknown

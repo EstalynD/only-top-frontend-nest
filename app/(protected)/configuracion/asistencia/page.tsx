@@ -1,4 +1,9 @@
 "use client";
+import AttendanceEnabledFromCard from '@/components/sistema/AttendanceEnabledFromCard';
+import AttendanceStatusCards from '@/components/sistema/AttendanceStatusCards';
+import FixedScheduleOverviewCard from '@/components/sistema/FixedScheduleOverviewCard';
+import RotatingShiftsList from '@/components/sistema/RotatingShiftsList';
+import type { AttendanceConfig as AttendanceConfigType } from '@/lib/service-sistema/attendance.api';
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,7 +20,13 @@ import {
   deleteShift,
   toggleShiftStatus,
   toggleFixedSchedule,
-  toggleRotatingShifts
+  toggleRotatingShifts,
+  getFixedScheduleAssignments,
+  formatFixedScheduleAssignmentsSummary,
+  formatAssignmentsSummary,
+  getScheduleTypeDisplayName,
+  getScheduleTypeIcon,
+  type ScheduleType
 } from '@/lib/service-sistema/attendance.api';
 import type { 
   AttendanceConfig, 
@@ -45,9 +56,16 @@ import {
   ToggleRight,
   Settings,
   Timer,
-  RotateCcw
+  RotateCcw,
+  Building2,
+  Briefcase,
+  Users2,
+  ChevronRight
 } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
+import ShiftAssignmentsModal from '@/components/rrhh/ShiftAssignmentsModal';
+import { getAllAreas, getAllCargos } from '@/lib/service-rrhh/api';
+import type { Area, Cargo } from '@/lib/service-rrhh/types';
 
 export default function AsistenciaPage() {
   const { token } = useAuth();
@@ -56,12 +74,15 @@ export default function AsistenciaPage() {
   // Estados principales
   const [config, setConfig] = React.useState<AttendanceConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState<'config' | 'assignments'>('config');
 
   // Modal estados
   const [showConfigModal, setShowConfigModal] = React.useState(false);
   const [showShiftModal, setShowShiftModal] = React.useState(false);
   const [showFixedScheduleModal, setShowFixedScheduleModal] = React.useState(false);
+  const [showAssignmentsModal, setShowAssignmentsModal] = React.useState(false);
   const [editingShift, setEditingShift] = React.useState<Shift | null>(null);
+  const [assignmentScheduleType, setAssignmentScheduleType] = React.useState<ScheduleType>('FIXED');
 
   // Confirmación de eliminación
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
@@ -72,6 +93,10 @@ export default function AsistenciaPage() {
   // Estados de carga
   const [submitting, setSubmitting] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+
+  // Áreas y Cargos (API real)
+  const [areas, setAreas] = React.useState<Area[]>([]);
+  const [cargos, setCargos] = React.useState<Cargo[]>([]);
 
   // Formularios
   const [configForm, setConfigForm] = React.useState<UpdateAttendanceConfigRequest>({
@@ -109,8 +134,14 @@ export default function AsistenciaPage() {
     
     const loadData = async () => {
       try {
-        const configRes = await getAttendanceConfig(token);
+        const [configRes, areasRes, cargosRes] = await Promise.all([
+          getAttendanceConfig(token),
+          getAllAreas(token, true),
+          getAllCargos(token, true)
+        ]);
         setConfig(configRes);
+        setAreas(areasRes);
+        setCargos(cargosRes);
         
         // Actualizar formularios con datos existentes
         setConfigForm({
@@ -331,6 +362,29 @@ export default function AsistenciaPage() {
     }
   };
 
+  // === ASSIGNMENT HANDLERS ===
+
+  const openAssignmentsModal = (scheduleType: ScheduleType, shift?: Shift) => {
+    setAssignmentScheduleType(scheduleType);
+    setEditingShift(shift || null);
+    setShowAssignmentsModal(true);
+  };
+
+  const handleAssignmentsUpdated = async () => {
+    if (!token) return;
+    
+    try {
+      const updated = await getAttendanceConfig(token);
+      setConfig(updated);
+    } catch (error) {
+      toast({
+        type: 'error',
+        title: 'Error al actualizar configuración',
+        description: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  };
+
   // === UTILITY FUNCTIONS ===
 
   const getShiftDuration = (timeSlot: TimeSlot) => {
@@ -358,20 +412,63 @@ export default function AsistenciaPage() {
         </p>
       </div>
 
-      <Card>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Clock size={20} style={{ color: 'var(--ot-blue-500)' }} />
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Configuraciones de Asistencia
-              </h2>
-            </div>
-            <Button onClick={() => setShowConfigModal(true)} variant="neutral" className="flex items-center gap-2">
+      {/* Tabs */}
+      <div className="border-b" style={{ borderColor: 'var(--border)' }}>
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('config')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'config'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+            style={{
+              borderBottomColor: activeTab === 'config' ? 'var(--ot-blue-500)' : 'transparent',
+              color: activeTab === 'config' ? 'var(--ot-blue-600)' : 'var(--text-muted)'
+            }}
+          >
+            <div className="flex items-center gap-2">
               <Settings size={16} />
-              Configurar
-            </Button>
-          </div>
+              Configuración
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'assignments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+            style={{
+              borderBottomColor: activeTab === 'assignments' ? 'var(--ot-blue-500)' : 'transparent',
+              color: activeTab === 'assignments' ? 'var(--ot-blue-600)' : 'var(--text-muted)'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Users2 size={16} />
+              Asignaciones
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content - Configuración */}
+      {activeTab === 'config' && (
+        <>
+          <Card>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Clock size={20} style={{ color: 'var(--ot-blue-500)' }} />
+                  <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Configuraciones de Asistencia
+                  </h2>
+                </div>
+                <Button onClick={() => setShowConfigModal(true)} variant="neutral" className="flex items-center gap-2">
+                  <Settings size={16} />
+                  Configurar
+                </Button>
+              </div>
 
           <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
             Ambas configuraciones están disponibles para ser asignadas a empleados según área y cargo.
@@ -379,249 +476,44 @@ export default function AsistenciaPage() {
 
           {config && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                className="p-4 rounded-lg border"
-                style={{ 
-                  background: config.fixedScheduleEnabled 
-                    ? 'var(--ot-blue-50)' 
-                    : 'var(--surface-muted)',
-                  borderColor: config.fixedScheduleEnabled 
-                    ? 'var(--ot-blue-500)' 
-                    : 'var(--border)',
-                  opacity: config.fixedScheduleEnabled ? 1 : 0.7
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <Calendar size={18} style={{ color: 'var(--ot-blue-600)' }} />
-                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                      Horario Fijo
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="px-2 py-1 text-xs rounded-full"
-                      style={{
-                        background: config.fixedScheduleEnabled ? 'var(--ot-green-100)' : 'var(--ot-red-100)',
-                        color: config.fixedScheduleEnabled ? 'var(--ot-green-700)' : 'var(--ot-red-700)'
-                      }}
-                    >
-                      {config.fixedScheduleEnabled ? 'Habilitado' : 'Deshabilitado'}
-                    </span>
-                    <Button
-                      onClick={() => handleToggleFixedSchedule(!config.fixedScheduleEnabled)}
-                      variant={config.fixedScheduleEnabled ? 'danger' : 'success'}
-                      className="p-1 text-xs"
-                    >
-                      {config.fixedScheduleEnabled ? 'Deshabilitar' : 'Habilitar'}
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Horario estándar de oficina con horarios fijos para cada día de la semana.
-                </p>
+              <div className="md:col-span-2">
+                <AttendanceEnabledFromCard token={token || ''} onUpdated={(cfg: AttendanceConfigType) => setConfig(cfg)} />
               </div>
-
-              <div
-                className="p-4 rounded-lg border"
-                style={{ 
-                  background: config.rotatingShiftsEnabled 
-                    ? 'var(--ot-green-50)' 
-                    : 'var(--surface-muted)',
-                  borderColor: config.rotatingShiftsEnabled 
-                    ? 'var(--ot-green-500)' 
-                    : 'var(--border)',
-                  opacity: config.rotatingShiftsEnabled ? 1 : 0.7
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <RotateCcw size={18} style={{ color: 'var(--ot-green-600)' }} />
-                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                      Turnos Rotativos
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="px-2 py-1 text-xs rounded-full"
-                      style={{
-                        background: config.rotatingShiftsEnabled ? 'var(--ot-green-100)' : 'var(--ot-red-100)',
-                        color: config.rotatingShiftsEnabled ? 'var(--ot-green-700)' : 'var(--ot-red-700)'
-                      }}
-                    >
-                      {config.rotatingShiftsEnabled ? 'Habilitado' : 'Deshabilitado'}
-                    </span>
-                    <Button
-                      onClick={() => handleToggleRotatingShifts(!config.rotatingShiftsEnabled)}
-                      variant={config.rotatingShiftsEnabled ? 'danger' : 'success'}
-                      className="p-1 text-xs"
-                    >
-                      {config.rotatingShiftsEnabled ? 'Deshabilitar' : 'Habilitar'}
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Sistema de turnos flexibles que pueden asignarse según área y cargo.
-                </p>
-              </div>
+              <AttendanceStatusCards 
+                fixedEnabled={!!config.fixedScheduleEnabled}
+                rotatingEnabled={!!config.rotatingShiftsEnabled}
+                onToggleFixed={handleToggleFixedSchedule}
+                onToggleRotating={handleToggleRotatingShifts}
+              />
             </div>
           )}
         </div>
-      </Card>
+  </Card>
 
       {/* Horario Fijo */}
       {config?.fixedScheduleEnabled && (
-        <Card>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Calendar size={20} style={{ color: 'var(--ot-blue-500)' }} />
-                <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Horario Fijo (Oficina Estándar)
-                </h2>
-              </div>
-              <Button onClick={() => setShowFixedScheduleModal(true)} className="flex items-center gap-2">
-                <Edit3 size={16} />
-                Editar Horario
-              </Button>
+        <>
+          <FixedScheduleOverviewCard fixedSchedule={config.fixedSchedule} onEdit={() => setShowFixedScheduleModal(true)} />
+          {config.fixedSchedule?.lunchBreakEnabled && config.fixedSchedule?.lunchBreak && (
+            <div className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Descanso de almuerzo: {formatTimeRange(config.fixedSchedule.lunchBreak)}
             </div>
-
-            {config.fixedSchedule && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(config.fixedSchedule).map(([day, timeSlot]) => (
-                  timeSlot && (
-                    <div 
-                      key={day}
-                      className="p-3 rounded-lg border"
-                      style={{ background: 'var(--surface-muted)', borderColor: 'var(--border)' }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-                          {getDayName(day as keyof FixedSchedule)}
-                        </span>
-                        <span className="text-xs px-2 py-1 rounded" style={{
-                          background: 'var(--ot-blue-100)',
-                          color: 'var(--ot-blue-700)'
-                        }}>
-                          {getShiftDuration(timeSlot)}
-                        </span>
-                      </div>
-                      <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                        {formatTimeRange(timeSlot)}
-                      </p>
-                    </div>
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </Card>
+          )}
+        </>
       )}
 
-      {/* Turnos Rotativos */}
+  {/* Turnos Rotativos */}
       {config?.rotatingShiftsEnabled && (
-        <Card>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <RotateCcw size={20} style={{ color: 'var(--ot-blue-500)' }} />
-                <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Turnos Rotativos
-                </h2>
-              </div>
-              <Button onClick={() => openShiftModal()} className="flex items-center gap-2">
-                <Plus size={16} />
-                Nuevo Turno
-              </Button>
-            </div>
-
-            {config.rotatingShifts.length > 0 ? (
-              <div className="space-y-4">
-                {config.rotatingShifts.map((shift) => (
-                  <div 
-                    key={shift.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-lg border"
-                    style={{ 
-                      background: 'var(--surface-muted)', 
-                      borderColor: 'var(--border)' 
-                    }}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <span style={{ fontSize: '1.2em' }}>
-                          {getShiftTypeIcon(shift.type)}
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                              {shift.name}
-                            </h3>
-                            <span 
-                              className="px-2 py-1 text-xs rounded-full"
-                              style={{
-                                background: shift.isActive ? 'var(--ot-green-100)' : 'var(--ot-red-100)',
-                                color: shift.isActive ? 'var(--ot-green-700)' : 'var(--ot-red-700)'
-                              }}
-                            >
-                              {shift.isActive ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm mt-1 flex-wrap" style={{ color: 'var(--text-muted)' }}>
-                            <span>{formatTimeRange(shift.timeSlot)}</span>
-                            <span>•</span>
-                            <span>{getShiftDuration(shift.timeSlot)}</span>
-                            {shift.description && (
-                              <>
-                                <span>•</span>
-                                <span className="break-words max-w-[220px] sm:max-w-none">{shift.description}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                      <Button
-                        onClick={() => handleToggleShift(shift)}
-                        variant={shift.isActive ? 'danger' : 'success'}
-                        className="p-2"
-                        title={shift.isActive ? 'Desactivar turno' : 'Activar turno'}
-                      >
-                        {shift.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-                      </Button>
-                      <Button
-                        onClick={() => openShiftModal(shift)}
-                        variant="neutral"
-                        className="p-2"
-                        title="Editar turno"
-                      >
-                        <Edit3 size={16} />
-                      </Button>
-                      <Button
-                        onClick={() => setDeleteConfirm({ show: true, shift })}
-                        variant="danger"
-                        className="p-2"
-                        title="Eliminar turno"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                <RotateCcw size={32} className="mx-auto mb-2 opacity-50" />
-                <p>No hay turnos configurados</p>
-                <p className="text-xs">Crea el primer turno rotativo</p>
-              </div>
-            )}
-          </div>
-        </Card>
+        <RotatingShiftsList 
+          shifts={config.rotatingShifts}
+          onNew={() => openShiftModal()}
+          onToggle={handleToggleShift}
+          onEdit={(s) => openShiftModal(s)}
+          onDelete={(s) => setDeleteConfirm({ show: true, shift: s })}
+        />
       )}
 
-      {/* Configuración General */}
+  {/* Configuración General */}
       {config && (
         <Card>
           <div className="p-6">
@@ -685,7 +577,7 @@ export default function AsistenciaPage() {
         </Card>
       )}
 
-      {/* Modal Configuración General */}
+  {/* Modal Configuración General */}
       <Modal
         isOpen={showConfigModal}
         onClose={() => setShowConfigModal(false)}
@@ -775,7 +667,7 @@ export default function AsistenciaPage() {
         </form>
       </Modal>
 
-      {/* Modal Horario Fijo */}
+  {/* Modal Horario Fijo */}
       <Modal
         isOpen={showFixedScheduleModal}
         onClose={() => setShowFixedScheduleModal(false)}
@@ -784,12 +676,74 @@ export default function AsistenciaPage() {
         maxWidth="max-w-3xl"
       >
         <form onSubmit={handleFixedScheduleSubmit} className="p-6 space-y-6">
+          {/* Configuración de Almuerzo */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                Habilitar descanso de almuerzo (aplica a todos los días activos)
+              </label>
+              <button
+                type="button"
+                onClick={() => setFixedScheduleForm(prev => ({
+                  ...prev,
+                  lunchBreakEnabled: !prev.lunchBreakEnabled,
+                }))}
+                className="inline-flex items-center gap-2 text-sm"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {fixedScheduleForm.lunchBreakEnabled ? <ToggleRight size={18} className="text-green-500"/> : <ToggleLeft size={18} className="text-gray-400"/>}
+                {fixedScheduleForm.lunchBreakEnabled ? 'Activado' : 'Desactivado'}
+              </button>
+            </div>
+            {fixedScheduleForm.lunchBreakEnabled && (
+              <div className="space-y-2">
+                <label className="inline-flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!fixedScheduleForm.lunchBreak}
+                    onChange={(e) => setFixedScheduleForm(prev => ({
+                      ...prev,
+                      lunchBreak: e.target.checked ? (prev.lunchBreak ?? { startTime: '13:00', endTime: '14:00' }) : undefined
+                    }))}
+                  />
+                  Usar rango fijo de almuerzo (opcional)
+                </label>
+                {fixedScheduleForm.lunchBreak && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Almuerzo</span>
+                    <Input
+                      type="time"
+                      value={fixedScheduleForm.lunchBreak.startTime}
+                      onChange={(e) => setFixedScheduleForm(prev => ({
+                        ...prev,
+                        lunchBreak: { startTime: e.target.value, endTime: prev.lunchBreak!.endTime }
+                      }))}
+                      className="w-28 md:w-32"
+                    />
+                    <span style={{ color: 'var(--text-muted)' }}>a</span>
+                    <Input
+                      type="time"
+                      value={fixedScheduleForm.lunchBreak.endTime}
+                      onChange={(e) => setFixedScheduleForm(prev => ({
+                        ...prev,
+                        lunchBreak: { startTime: prev.lunchBreak!.startTime, endTime: e.target.value }
+                      }))}
+                      className="w-28 md:w-32"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-4">
-            {Object.entries(fixedScheduleForm).map(([day, timeSlot]) => (
+            {(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const).map((day) => {
+              const timeSlot = fixedScheduleForm[day];
+              return (
               <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div className="w-full sm:w-28">
                   <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    {getDayName(day as keyof FixedSchedule)}
+                    {getDayName(day)}
                   </span>
                 </div>
                 
@@ -833,7 +787,8 @@ export default function AsistenciaPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
@@ -857,7 +812,7 @@ export default function AsistenciaPage() {
         </form>
       </Modal>
 
-      {/* Modal Turno */}
+  {/* Modal Turno */}
       <Modal
         isOpen={showShiftModal}
         onClose={() => setShowShiftModal(false)}
@@ -984,6 +939,250 @@ export default function AsistenciaPage() {
         </form>
       </Modal>
 
+        </>
+      )}
+
+      {/* Tab Contenido - Asignaciones */}
+      {activeTab === 'assignments' && (
+        <div className="space-y-6">
+          {/* Horario Fijo - Asignaciones */}
+          {config?.fixedScheduleEnabled && (
+            <Card>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Calendar size={20} style={{ color: 'var(--ot-blue-500)' }} />
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      Horario Fijo - Asignaciones
+                    </h2>
+                  </div>
+                  <Button 
+                    onClick={() => openAssignmentsModal('FIXED')}
+                    className="flex items-center gap-2"
+                  >
+                    <Users2 size={16} />
+                    Gestionar Asignaciones
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg border" style={{ 
+                    background: 'var(--surface-muted)', 
+                    borderColor: 'var(--border)' 
+                  }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Building2 size={16} style={{ color: 'var(--ot-blue-600)' }} />
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        Áreas Asignadas
+                      </span>
+                    </div>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {config.fixedSchedule?.assignedAreas?.length || 0} áreas asignadas
+                    </p>
+                    {config.fixedSchedule?.assignedAreas && config.fixedSchedule.assignedAreas.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {config.fixedSchedule.assignedAreas.slice(0, 3).map(areaId => {
+                          const area = areas.find(a => a._id === areaId);
+                          return area ? (
+                            <span 
+                              key={areaId}
+                              className="px-2 py-1 text-xs rounded"
+                              style={{
+                                background: 'var(--ot-blue-100)',
+                                color: 'var(--ot-blue-700)'
+                              }}
+                            >
+                              {area.name}
+                            </span>
+                          ) : null;
+                        })}
+                        {config.fixedSchedule.assignedAreas.length > 3 && (
+                          <span className="px-2 py-1 text-xs rounded" style={{
+                            background: 'var(--surface-muted)',
+                            color: 'var(--text-muted)'
+                          }}>
+                            +{config.fixedSchedule.assignedAreas.length - 3} más
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 rounded-lg border" style={{ 
+                    background: 'var(--surface-muted)', 
+                    borderColor: 'var(--border)' 
+                  }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Briefcase size={16} style={{ color: 'var(--ot-green-600)' }} />
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        Cargos Asignados
+                      </span>
+                    </div>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {config.fixedSchedule?.assignedCargos?.length || 0} cargos asignados
+                    </p>
+                    {config.fixedSchedule?.assignedCargos && config.fixedSchedule.assignedCargos.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {config.fixedSchedule.assignedCargos.slice(0, 3).map(cargoId => {
+                          const cargo = cargos.find(c => c._id === cargoId);
+                          return cargo ? (
+                            <span 
+                              key={cargoId}
+                              className="px-2 py-1 text-xs rounded"
+                              style={{
+                                background: 'var(--ot-green-100)',
+                                color: 'var(--ot-green-700)'
+                              }}
+                            >
+                              {cargo.name}
+                            </span>
+                          ) : null;
+                        })}
+                        {config.fixedSchedule.assignedCargos.length > 3 && (
+                          <span className="px-2 py-1 text-xs rounded" style={{
+                            background: 'var(--surface-muted)',
+                            color: 'var(--text-muted)'
+                          }}>
+                            +{config.fixedSchedule.assignedCargos.length - 3} más
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Turnos Rotativos - Asignaciones */}
+          {config?.rotatingShiftsEnabled && (
+            <Card>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <RotateCcw size={20} style={{ color: 'var(--ot-green-500)' }} />
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      Turnos Rotativos - Asignaciones
+                    </h2>
+                  </div>
+                </div>
+
+                {config.rotatingShifts.length > 0 ? (
+                  <div className="space-y-4">
+                    {config.rotatingShifts.map((shift) => (
+                      <div 
+                        key={shift.id}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-lg border"
+                        style={{ 
+                          background: 'var(--surface-muted)', 
+                          borderColor: 'var(--border)' 
+                        }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <span style={{ fontSize: '1.2em' }}>
+                              {getShiftTypeIcon(shift.type)}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-3">
+                                <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                  {shift.name}
+                                </h3>
+                                <span 
+                                  className="px-2 py-1 text-xs rounded-full"
+                                  style={{
+                                    background: shift.isActive ? 'var(--ot-green-100)' : 'var(--ot-red-100)',
+                                    color: shift.isActive ? 'var(--ot-green-700)' : 'var(--ot-red-700)'
+                                  }}
+                                >
+                                  {shift.isActive ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm mt-1 flex-wrap" style={{ color: 'var(--text-muted)' }}>
+                                <span>{formatTimeRange(shift.timeSlot)}</span>
+                                <span>•</span>
+                                <span>{getShiftDuration(shift.timeSlot)}</span>
+                                {shift.description && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="break-words max-w-[220px] sm:max-w-none">{shift.description}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2 w-full sm:w-auto sm:items-end">
+                          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                            <Building2 size={14} />
+                            <span>{shift.assignedAreas?.length || 0} áreas</span>
+                            <Briefcase size={14} />
+                            <span>{shift.assignedCargos?.length || 0} cargos</span>
+                          </div>
+                          {/* Chips de Áreas asignadas */}
+                          {shift.assignedAreas && shift.assignedAreas.length > 0 && (
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {shift.assignedAreas.slice(0, 3).map(areaId => {
+                                const area = areas.find(a => a._id === areaId);
+                                return area ? (
+                                  <span key={areaId} className="px-2 py-1 text-xs rounded" style={{ background: 'var(--ot-blue-100)', color: 'var(--ot-blue-700)' }}>
+                                    {area.name}
+                                  </span>
+                                ) : null;
+                              })}
+                              {shift.assignedAreas.length > 3 && (
+                                <span className="px-2 py-1 text-xs rounded" style={{ background: 'var(--surface-muted)', color: 'var(--text-muted)' }}>
+                                  +{shift.assignedAreas.length - 3} más
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {/* Chips de Cargos asignados */}
+                          {shift.assignedCargos && shift.assignedCargos.length > 0 && (
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {shift.assignedCargos.slice(0, 3).map(cargoId => {
+                                const cargo = cargos.find(c => c._id === cargoId);
+                                return cargo ? (
+                                  <span key={cargoId} className="px-2 py-1 text-xs rounded" style={{ background: 'var(--ot-green-100)', color: 'var(--ot-green-700)' }}>
+                                    {cargo.name}
+                                  </span>
+                                ) : null;
+                              })}
+                              {shift.assignedCargos.length > 3 && (
+                                <span className="px-2 py-1 text-xs rounded" style={{ background: 'var(--surface-muted)', color: 'var(--text-muted)' }}>
+                                  +{shift.assignedCargos.length - 3} más
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 justify-end">
+                            <Button
+                              onClick={() => openAssignmentsModal('ROTATING', shift)}
+                              variant="neutral"
+                              className="p-2"
+                              title="Gestionar asignaciones"
+                            >
+                              <Users2 size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                    <RotateCcw size={32} className="mx-auto mb-2 opacity-50" />
+                    <p>No hay turnos configurados</p>
+                    <p className="text-xs">Crea turnos para gestionar asignaciones</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+  )}
+
       {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={deleteConfirm.show}
@@ -1004,6 +1203,19 @@ export default function AsistenciaPage() {
         loading={deleting}
         onConfirm={handleDeleteShift}
         onCancel={() => setDeleteConfirm({ show: false, shift: null })}
+      />
+
+      {/* Modal de Asignaciones */}
+      <ShiftAssignmentsModal
+        isOpen={showAssignmentsModal}
+        onClose={() => setShowAssignmentsModal(false)}
+        scheduleType={assignmentScheduleType}
+        shift={editingShift}
+        fixedSchedule={config?.fixedSchedule}
+        token={token || ''}
+        areas={areas}
+        cargos={cargos}
+        onAssignmentsUpdated={handleAssignmentsUpdated}
       />
     </div>
   );
