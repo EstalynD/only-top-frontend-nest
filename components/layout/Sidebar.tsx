@@ -874,7 +874,7 @@ export function Sidebar({ variant = "desktop", open = false, onClose }: SidebarP
 
       <nav className={`pc-sidebar sidebar-width flex flex-col bg-surface border-r border-border ${
         variant === "desktop" 
-          ? "sticky top-16 h-[calc(100dvh-4rem)]" 
+          ? "h-full" 
           : ""
       }`} style={mobileStyles}>
         <div className="navbar-wrapper flex flex-col h-full">

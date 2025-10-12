@@ -34,13 +34,13 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
         
         {/* Desktop Layout */}
-        <div className="hidden md:flex min-h-[calc(100vh-4rem)]">
+        <div className="hidden md:flex flex-1 min-h-0">
           <Sidebar variant="desktop" />
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-y-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               {children}
             </div>
@@ -48,7 +48,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Mobile Layout */}
-        <div className="md:hidden min-h-[calc(100vh-4rem)] relative">
+        <div className="md:hidden flex-1 min-h-0 relative">
           {/* Mobile Sidebar Overlay */}
           {sidebarOpen && (
             <>
@@ -66,7 +66,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Mobile Content */}
-          <main className="overflow-auto">
+          <main className="h-full overflow-y-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               {children}
             </div>
