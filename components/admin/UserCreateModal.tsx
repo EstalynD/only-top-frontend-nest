@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import Modal from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { UserPlus, Save } from 'lucide-react';
 
 export type CreateUserForm = {
@@ -37,7 +38,7 @@ export default function UserCreateModal({ isOpen, onClose, onSubmit, isSubmittin
       onClose={onClose}
       title="Crear usuario"
       icon={<UserPlus size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-md"
+      maxWidth="md"
     >
       <form onSubmit={submit} className="p-6 space-y-4">
         <div>
@@ -97,18 +98,23 @@ export default function UserCreateModal({ isOpen, onClose, onSubmit, isSubmittin
           />
         </div>
         <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+          <Button 
+            type="button" 
+            onClick={onClose} 
+            variant="secondary"
+            size="md"
+          >
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+            variant="primary"
+            size="md"
           >
             <Save size={16} />
             <span>{isSubmitting ? 'Creando…' : 'Crear'}</span>
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

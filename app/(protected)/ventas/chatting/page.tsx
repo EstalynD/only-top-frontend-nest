@@ -13,6 +13,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/Button';
 import { 
   getSales, 
   getGeneralStats, 
@@ -212,94 +213,81 @@ export default function ChattingVentasPage() {
 
       {/* Actions Bar */}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 rounded-lg font-medium transition-all hover:scale-105"
+          variant="primary"
+          size="md"
+          icon={<Plus size={16} />}
           style={{ background: 'var(--ot-blue-500)', color: 'white' }}
         >
-          <Plus size={16} className="inline mr-2" />
           Registrar Venta
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={handleDownloadTemplate}
           disabled={downloadingTemplate}
-          className="px-4 py-2 rounded-lg font-medium transition-colors"
+          variant="primary"
+          size="md"
+          icon={<FileSpreadsheet size={16} />}
+          loading={downloadingTemplate}
+          loadingText="Descargando..."
           style={{
             background: '#8b5cf6',
             color: 'white',
-            opacity: downloadingTemplate ? 0.6 : 1,
           }}
         >
-          {downloadingTemplate ? (
-            <Loader size="sm" />
-          ) : (
-            <>
-              <FileSpreadsheet size={16} className="inline mr-2" />
-              Descargar Plantilla
-            </>
-          )}
-        </button>
+          Descargar Plantilla
+        </Button>
 
-        <button
+        <Button
           onClick={() => setShowImportModal(true)}
-          className="px-4 py-2 rounded-lg font-medium transition-colors"
+          variant="primary"
+          size="md"
+          icon={<Upload size={16} />}
           style={{
             background: '#06b6d4',
             color: 'white',
           }}
         >
-          <Upload size={16} className="inline mr-2" />
           Importar Excel
-        </button>
+        </Button>
         
-        <button
+        <Button
           onClick={() => setShowFilters(!showFilters)}
-          className="px-4 py-2 rounded-lg font-medium transition-colors"
-          style={{
-            background: showFilters ? 'var(--ot-blue-500)' : 'var(--surface-muted)',
-            color: showFilters ? 'white' : 'var(--text-primary)',
-            border: '1px solid var(--border)',
-          }}
+          variant={showFilters ? "primary" : "neutral"}
+          size="md"
+          icon={<Filter size={16} />}
+          style={showFilters ? {
+            background: 'var(--ot-blue-500)',
+            color: 'white',
+          } : undefined}
         >
-          <Filter size={16} className="inline mr-2" />
           Filtros
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={loadData}
           disabled={loading}
-          className="px-4 py-2 rounded-lg font-medium transition-colors"
-          style={{
-            background: 'var(--surface-muted)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border)',
-            opacity: loading ? 0.6 : 1,
-          }}
+          variant="neutral"
+          size="md"
+          icon={<RefreshCw size={16} className={loading ? 'animate-spin' : ''} />}
+          loading={loading}
         >
-          <RefreshCw size={16} className="inline mr-2" />
           Actualizar
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={handleExportPdf}
           disabled={exportingPdf}
-          className="px-4 py-2 rounded-lg font-medium transition-colors ml-auto"
-          style={{
-            background: '#10b981',
-            color: 'white',
-            opacity: exportingPdf ? 0.6 : 1,
-          }}
+          variant="success"
+          size="md"
+          icon={<Download size={16} />}
+          loading={exportingPdf}
+          loadingText="Exportando..."
+          className="ml-auto"
         >
-          {exportingPdf ? (
-            <Loader size="sm" />
-          ) : (
-            <>
-              <Download size={16} className="inline mr-2" />
-              Exportar PDF
-            </>
-          )}
-        </button>
+          Exportar PDF
+        </Button>
       </div>
 
       {/* Filters */}
@@ -363,24 +351,21 @@ export default function ChattingVentasPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-4">
-            <button
+            <Button
               onClick={() => setFilters({ fechaInicio: '', fechaFin: '' })}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
-              style={{
-                background: 'var(--surface-muted)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border)',
-              }}
+              variant="neutral"
+              size="md"
             >
               Limpiar
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={loadData}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
+              variant="primary"
+              size="md"
               style={{ background: 'var(--ot-blue-500)', color: 'white' }}
             >
               Aplicar Filtros
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -4,6 +4,8 @@ import { Clock, Plus, Filter, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { addToast } from '@/components/ui/Toast';
 import Loader from '@/components/ui/Loader';
+import { Button } from '@/components/ui/Button';
+import DataTable, { Column } from '@/components/ui/DataTable';
 import BadgeEstado from '@/components/rrhh/horas-extras/BadgeEstado';
 import ModalCrearEditarHorasExtras from '@/components/rrhh/horas-extras/ModalCrearEditar';
 import ModalDetallesHorasExtras from '@/components/rrhh/horas-extras/ModalDetalles';
@@ -37,6 +39,11 @@ export default function HorasExtrasPage() {
   const [showModalAprobarLote, setShowModalAprobarLote] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState<string | null>(null);
   const [modoEdicion, setModoEdicion] = useState(false);
+  
+  // Estados de loading para botones
+  const [isCreating, setIsCreating] = useState(false);
+  const [isApprovingBatch, setIsApprovingBatch] = useState(false);
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
 
   // TODO: Implementar verificación de permisos cuando esté disponible
   const canCreate = true;
@@ -44,6 +51,80 @@ export default function HorasExtrasPage() {
   const canDelete = true;
   const canApprove = true;
   const canViewStats = true;
+
+  // Configuración de columnas para DataTable
+  const columns: Column<HorasExtrasRegistro>[] = [
+    {
+      key: 'periodo',
+      title: 'Período',
+      dataIndex: 'periodo',
+      sortable: true,
+      searchable: true,
+      align: 'left',
+      render: (value) => (
+        <span className="text-sm font-medium">
+          {formatPeriodo(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'empleado',
+      title: 'Empleado',
+      dataIndex: 'empleadoId',
+      sortable: true,
+      searchable: true,
+      align: 'left',
+      render: (value) => (
+        <span className="text-sm">
+          {typeof value === 'string' ? value : getNombreEmpleado(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'totalHoras',
+      title: 'Total Horas',
+      dataIndex: 'totalHoras',
+      sortable: true,
+      align: 'right',
+      render: (value) => (
+        <span className="text-sm font-medium">
+          {value.toFixed(2)} hrs
+        </span>
+      ),
+    },
+    {
+      key: 'totalRecargo',
+      title: 'Total COP',
+      dataIndex: 'totalRecargo',
+      sortable: true,
+      align: 'right',
+      render: (value) => (
+        <span className="text-sm font-semibold">
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'estado',
+      title: 'Estado',
+      dataIndex: 'estado',
+      sortable: true,
+      align: 'left',
+      render: (value) => <BadgeEstado estado={value} size="sm" />,
+    },
+    {
+      key: 'fecha',
+      title: 'Fecha',
+      dataIndex: 'createdAt',
+      sortable: true,
+      align: 'left',
+      render: (value) => (
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          {formatDate(value)}
+        </span>
+      ),
+    },
+  ];
 
   useEffect(() => {
     cargarRegistros();
@@ -68,9 +149,14 @@ export default function HorasExtrasPage() {
     }
   };
 
-  const aplicarFiltros = () => {
-    cargarRegistros();
-    setShowFilters(false);
+  const aplicarFiltros = async () => {
+    setIsApplyingFilters(true);
+    try {
+      await cargarRegistros();
+      setShowFilters(false);
+    } finally {
+      setIsApplyingFilters(false);
+    }
   };
 
   const limpiarFiltros = () => {
@@ -80,9 +166,12 @@ export default function HorasExtrasPage() {
 
   // Handlers de modales
   const handleCrear = () => {
+    setIsCreating(true);
     setModoEdicion(false);
     setRegistroSeleccionado(null);
     setShowModalCrear(true);
+    // Simular loading para UX
+    setTimeout(() => setIsCreating(false), 500);
   };
 
   const handleEditar = (id: string) => {
@@ -99,6 +188,13 @@ export default function HorasExtrasPage() {
   const handleAprobar = (id: string) => {
     setRegistroSeleccionado(id);
     setShowModalAprobar(true);
+  };
+
+  const handleAprobarLote = () => {
+    setIsApprovingBatch(true);
+    setShowModalAprobarLote(true);
+    // Simular loading para UX
+    setTimeout(() => setIsApprovingBatch(false), 500);
   };
 
   // Flujo de pago removido
@@ -152,18 +248,6 @@ export default function HorasExtrasPage() {
     borderBottom: '1px solid var(--border)',
   };
 
-  const buttonPrimaryStyle: React.CSSProperties = {
-    background: 'var(--ot-blue-500)',
-    color: '#ffffff',
-    padding: '0.625rem 1.25rem',
-    borderRadius: '0.5rem',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    transition: 'all 0.2s',
-    border: 'none',
-    cursor: 'pointer',
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -173,7 +257,7 @@ export default function HorasExtrasPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div style={cardStyle}>
         <div className="p-4 sm:p-6" style={headerStyle}>
@@ -205,64 +289,57 @@ export default function HorasExtrasPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               {canViewStats && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="md"
+                  icon={<TrendingUp size={16} />}
                   onClick={() => {
                     window.location.href = '/rrhh/horas-extras/estadisticas';
                   }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  style={{
-                    background: 'var(--surface-muted)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border)',
-                  }}
+                  ariaLabel="Ver estadísticas de horas extras"
                 >
-                  <TrendingUp size={16} />
                   Estadísticas
-                </button>
+                </Button>
               )}
 
-              <button
+              <Button
+                variant={showFilters ? "primary" : "secondary"}
+                size="md"
+                icon={<Filter size={16} />}
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{
-                  background: showFilters ? 'var(--ot-blue-500)' : 'var(--surface-muted)',
-                  color: showFilters ? '#ffffff' : 'var(--text-primary)',
-                  border: `1px solid ${showFilters ? 'var(--ot-blue-500)' : 'var(--border)'}`,
-                }}
+                ariaLabel={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                ariaPressed={showFilters}
               >
-                <Filter size={16} />
                 Filtros
-              </button>
+              </Button>
 
               {canCreate && (
-                <button
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={<Plus size={16} />}
+                  loading={isCreating}
+                  loadingText="Abriendo formulario..."
                   onClick={handleCrear}
-                  className="flex items-center gap-2 transition-colors"
-                  style={buttonPrimaryStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--ot-blue-600)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--ot-blue-500)';
-                  }}
+                  ariaLabel="Registrar nuevas horas extras"
+                  preventMultipleClicks={true}
                 >
-                  <Plus size={16} />
                   Registrar Horas Extras
-                </button>
+                </Button>
               )}
 
               {canApprove && (
-                <button
-                  onClick={() => setShowModalAprobarLote(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  style={{
-                    background: 'var(--ot-green-500)',
-                    color: '#ffffff',
-                    border: '1px solid var(--ot-green-500)',
-                  }}
+                <Button
+                  variant="success"
+                  size="md"
+                  loading={isApprovingBatch}
+                  loadingText="Abriendo aprobación..."
+                  onClick={handleAprobarLote}
+                  ariaLabel="Aprobar todas las horas extras del período"
+                  preventMultipleClicks={true}
                 >
                   Aceptar todos (periodo)
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -300,135 +377,50 @@ export default function HorasExtrasPage() {
             </div>
 
             <div className="flex items-center gap-3 mt-4">
-              <button
+              <Button
+                variant="primary"
+                size="md"
+                loading={isApplyingFilters}
+                loadingText="Aplicando filtros..."
                 onClick={aplicarFiltros}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={buttonPrimaryStyle}
+                ariaLabel="Aplicar filtros seleccionados"
+                preventMultipleClicks={true}
               >
                 Aplicar Filtros
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="neutral"
+                size="md"
                 onClick={limpiarFiltros}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  border: '1px solid var(--border)',
-                }}
+                ariaLabel="Limpiar todos los filtros"
               >
                 Limpiar
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Tabla de Registros */}
-      <div style={cardStyle}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Periodo
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Empleado
-                </th>
-                <th
-                  className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Total Horas
-                </th>
-                <th
-                  className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Total COP
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Estado
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Fecha
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {registros.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-12 text-center"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    <Clock size={48} className="mx-auto mb-3 opacity-50" />
-                    <p className="text-sm font-medium">No hay registros de horas extras</p>
-                    <p className="text-xs mt-1">Los registros aparecerán aquí</p>
-                  </td>
-                </tr>
-              ) : (
-                registros.map((registro) => (
-                  <tr
-                    key={registro._id}
-                    className="border-b transition-colors cursor-pointer"
-                    style={{ borderColor: 'var(--border)' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'var(--surface-muted)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                    onClick={() => handleVerDetalles(registro._id)}
-                  >
-                    <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>
-                      <span className="text-sm font-medium">
-                        {formatPeriodo(registro.periodo)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>
-                      <span className="text-sm">
-                        {typeof registro.empleadoId === 'string'
-                          ? registro.empleadoId
-                          : getNombreEmpleado(registro.empleadoId)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right" style={{ color: 'var(--text-primary)' }}>
-                      <span className="text-sm font-medium">
-                        {registro.totalHoras.toFixed(2)} hrs
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right" style={{ color: 'var(--text-primary)' }}>
-                      <span className="text-sm font-semibold">
-                        {registro.totalRecargo}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <BadgeEstado estado={registro.estado} size="sm" />
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>
-                      <span className="text-xs">{formatDate(registro.createdAt)}</span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Tabla de Registros con DataTable */}
+      <DataTable
+        data={registros}
+        columns={columns}
+        loading={loading}
+        searchable={true}
+        searchPlaceholder="Buscar por período, empleado..."
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: false,
+          showQuickJumper: false,
+        }}
+        onRowClick={(record) => handleVerDetalles(record._id)}
+        emptyState={{
+          icon: <Clock size={48} />,
+          title: "No hay registros de horas extras",
+          description: "Los registros aparecerán aquí cuando se creen"
+        }}
+        className="mt-6"
+      />
 
       {/* ========== MODALES ========== */}
       
@@ -496,7 +488,10 @@ export default function HorasExtrasPage() {
       {token && (
         <ModalAprobarLote
           isOpen={showModalAprobarLote}
-          onClose={() => setShowModalAprobarLote(false)}
+          onClose={() => {
+            setShowModalAprobarLote(false);
+            setIsApprovingBatch(false);
+          }}
           onSuccess={handleModalSuccess}
           anio={filtros.anio || new Date().getFullYear()}
           mes={filtros.mes || (new Date().getMonth() + 1)}

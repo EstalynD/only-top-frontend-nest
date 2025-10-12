@@ -757,7 +757,7 @@ export default function ConfiguracionPage() {
         onClose={() => setShowTrmModal(false)}
         title="Crear Nuevo TRM"
         icon={<Plus size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-md"
+        maxWidth="md"
       >
         <form onSubmit={handleCreateTrm} className="p-6 space-y-4">
           <Input
@@ -814,7 +814,7 @@ export default function ConfiguracionPage() {
         onClose={() => setShowCurrencyModal(false)}
         title={`Editar ${editingCurrency?.code || 'Moneda'}`}
         icon={<Edit3 size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-md"
+        maxWidth="md"
       >
         <form onSubmit={handleUpdateCurrency} className="p-6 space-y-4">
           <div>

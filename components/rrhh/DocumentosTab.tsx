@@ -26,6 +26,7 @@ import { getDocumentosByEmpleado, getEstadisticasDocumentos, descargarDocumento,
 import type { Documento, DocumentosStats } from '@/lib/service-rrhh/contratos-types';
 import CrearDocumentoModal from '@/components/rrhh/CrearDocumentoModal';
 import EditarDocumentoModal from '@/components/rrhh/EditarDocumentoModal';
+import ConfirmationModal from '@/components/ui/ConfirmationModal';
 
 interface Props {
   empleadoId: string;
@@ -44,6 +45,9 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
   const [openCrearDocumento, setOpenCrearDocumento] = React.useState(false);
   const [openEditarDocumento, setOpenEditarDocumento] = React.useState(false);
   const [documentoSeleccionado, setDocumentoSeleccionado] = React.useState<Documento | null>(null);
+  const [openConfirmacionEliminar, setOpenConfirmacionEliminar] = React.useState(false);
+  const [documentoAEliminar, setDocumentoAEliminar] = React.useState<Documento | null>(null);
+  const [eliminando, setEliminando] = React.useState(false);
 
   React.useEffect(() => {
     loadDocumentos();
@@ -55,7 +59,8 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
       setLoading(true);
       setError(null);
       const response = await getDocumentosByEmpleado(empleadoId, token);
-      setDocumentos(response.data);
+      // requestJSON já desenrola a resposta, então response já é o array
+      setDocumentos(Array.isArray(response) ? response : []);
     } catch (err: any) {
       console.error('Error loading documentos:', err);
       // Si el endpoint no existe, usar datos mock para desarrollo
@@ -65,6 +70,7 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
         setError(null);
       } else {
         setError(err.message || 'No se pudieron cargar los documentos');
+        setDocumentos([]); // Asegurar que siempre sea un array
         toast({
           type: 'error',
           title: 'Error al cargar documentos',
@@ -76,13 +82,23 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
     }
   };
 
-  const handleDocumentoCreado = () => {
+  const handleDocumentoCreado = (tipoDocumento?: string) => {
     setOpenCrearDocumento(false);
-    toast({
-      type: 'success',
-      title: 'Documento creado',
-      description: 'El documento se subió correctamente.'
-    });
+    
+    if (tipoDocumento === 'CONTRATO_LABORAL') {
+      toast({
+        type: 'success',
+        title: 'Documento y Contrato creados',
+        description: 'El documento de contrato laboral se subió correctamente y se creó automáticamente un contrato en el sistema.'
+      });
+    } else {
+      toast({
+        type: 'success',
+        title: 'Documento creado',
+        description: 'El documento se subió correctamente.'
+      });
+    }
+    
     // Refrescar lista y estadísticas al crear
     loadDocumentos();
     loadEstadisticas();
@@ -106,13 +122,17 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
     loadEstadisticas();
   };
 
-  const handleEliminarDocumento = async (documento: Documento) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el documento "${documento.nombre}"? Esta acción no se puede deshacer.`)) {
-      return;
-    }
+  const handleEliminarDocumento = (documento: Documento) => {
+    setDocumentoAEliminar(documento);
+    setOpenConfirmacionEliminar(true);
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!documentoAEliminar) return;
 
     try {
-      await deleteDocumento(documento._id, token);
+      setEliminando(true);
+      await deleteDocumento(documentoAEliminar._id, token);
       toast({
         type: 'success',
         title: 'Documento eliminado',
@@ -121,19 +141,31 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
       // Refrescar lista y estadísticas al eliminar
       loadDocumentos();
       loadEstadisticas();
+      // Cerrar modal y limpiar estado
+      setOpenConfirmacionEliminar(false);
+      setDocumentoAEliminar(null);
     } catch (err: any) {
       toast({
         type: 'error',
         title: 'Error al eliminar',
         description: err?.message || 'No se pudo eliminar el documento'
       });
+    } finally {
+      setEliminando(false);
     }
+  };
+
+  const cancelarEliminacion = () => {
+    setOpenConfirmacionEliminar(false);
+    setDocumentoAEliminar(null);
+    setEliminando(false);
   };
 
   const loadEstadisticas = async () => {
     try {
       const response = await getEstadisticasDocumentos(empleadoId, token);
-      setEstadisticas(response.data);
+      // requestJSON já desenrola a resposta, então response já é o objeto de estatísticas
+      setEstadisticas(response);
     } catch (err: any) {
       console.error('Error loading estadísticas:', err);
       // Si el endpoint no existe, usar datos mock para desarrollo
@@ -228,7 +260,10 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const documentosFiltrados = documentos.filter(doc => {
+  // Asegurar que documentos siempre sea un array
+  const documentosSeguros = Array.isArray(documentos) ? documentos : [];
+  
+  const documentosFiltrados = documentosSeguros.filter(doc => {
     if (filtroTipo && doc.tipoDocumento !== filtroTipo) return false;
     if (filtroEstado && doc.estado !== filtroEstado) return false;
     return true;
@@ -248,7 +283,8 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
   const handleDescargar = async (doc: Documento) => {
     try {
       const resp = await descargarDocumento(doc._id, token);
-      const url = resp.data.url;
+      // requestJSON já desenrola a resposta, então resp já é o objeto de dados
+      const url = resp.url;
       if (url) {
         const a = document.createElement('a');
         a.href = url;
@@ -321,7 +357,7 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
           <p className={`text-sm ${
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}>
-            {documentos.length} documento{documentos.length !== 1 ? 's' : ''} registrado{documentos.length !== 1 ? 's' : ''}
+            {documentosSeguros.length} documento{documentosSeguros.length !== 1 ? 's' : ''} registrado{documentosSeguros.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
@@ -721,7 +757,11 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
         isOpen={openCrearDocumento}
         onClose={() => setOpenCrearDocumento(false)}
         empleadoId={empleadoId}
-        onCreated={handleDocumentoCreado}
+        onCreated={(docId) => {
+          // No podemos obtener el tipo de documento aquí, pero podemos verificar si se creó un contrato
+          // El mensaje se mostrará desde el backend o podemos hacer una verificación adicional
+          handleDocumentoCreado();
+        }}
       />
 
       {/* Modal para editar documento */}
@@ -733,6 +773,20 @@ export default function DocumentosTab({ empleadoId, token }: Props) {
         }}
         documento={documentoSeleccionado}
         onUpdated={handleDocumentoActualizado}
+      />
+
+      {/* Modal de confirmación para eliminar documento */}
+      <ConfirmationModal
+        isOpen={openConfirmacionEliminar}
+        onClose={cancelarEliminacion}
+        onConfirm={confirmarEliminacion}
+        title="Eliminar Documento"
+        message={`¿Estás seguro de que quieres eliminar el documento "${documentoAEliminar?.nombre}"?`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={eliminando}
+        icon={<Trash2 size={24} />}
       />
     </div>
   );

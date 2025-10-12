@@ -13,7 +13,7 @@ export const RRHH_ROUTES = {
   // Contratos
   contratos: '/api/rrhh/contratos',
   contratoById: (id: string) => `/api/rrhh/contratos/${id}`,
-  contratosByEmpleado: (empleadoId: string) => `/api/rrhh/contratos/empleado/${empleadoId}`,
+  contratosByEmpleado: (empleadoId: string) => `/api/rrhh/empleados/${empleadoId}/contratos`,
   aprobarContrato: (id: string) => `/api/rrhh/contratos/${id}/aprobar`,
   renovarContrato: (id: string) => `/api/rrhh/contratos/${id}/renovar`,
   contratosProximosAVencer: '/api/rrhh/contratos/alertas/proximos-vencer',
@@ -36,6 +36,47 @@ export const RRHH_ROUTES = {
   buscarDocumentos: '/api/rrhh/documentos/buscar/criterios',
   descargarDocumento: (id: string) => `/api/rrhh/documentos/${id}/descargar`,
 
+  // Plantillas de Contratos
+  contractTemplates: '/api/rrhh/empleados/contratos/plantillas',
+  contractTemplatesByArea: (areaCode: string) => `/api/rrhh/empleados/contratos/plantillas/area/${areaCode}`,
+  contractTemplatesByCargo: (cargoCode: string) => `/api/rrhh/empleados/contratos/plantillas/cargo/${cargoCode}`,
+  assignContractTemplates: '/api/rrhh/empleados/contratos/plantillas/asignar',
+  verifyTemplateAssignments: '/api/rrhh/empleados/contratos/plantillas/verificar',
+  clearTemplateAssignments: '/api/rrhh/empleados/contratos/plantillas/limpiar',
+  
+  // Contratos Laborales con Plantillas
+  generarContratoLaboral: (empleadoId: string) => `/api/rrhh/empleados/${empleadoId}/contrato-laboral`,
+  getInfoContratoLaboral: (empleadoId: string) => `/api/rrhh/empleados/${empleadoId}/contrato-laboral/info`,
+  validarPlantillaContrato: (empleadoId: string) => `/api/rrhh/empleados/${empleadoId}/contrato-laboral/validar`,
+  plantillasContratos: '/api/rrhh/empleados/contratos/plantillas',
+
   // Seeder
   seedDefaults: '/api/rrhh/seed-defaults',
+
+  // Endowment (Dotación)
+  endowment: {
+    base: '/api/rrhh/endowment',
+    categories: '/api/rrhh/endowment/categories',
+    categoryById: (id: string) => `/api/rrhh/endowment/categories/${id}`,
+    items: '/api/rrhh/endowment/items',
+    itemById: (id: string) => `/api/rrhh/endowment/items/${id}`,
+    tracking: '/api/rrhh/endowment/tracking',
+    trackingById: (id: string) => `/api/rrhh/endowment/tracking/${id}`,
+    trackingByEmpleado: (empleadoId: string) => `/api/rrhh/endowment/tracking/empleado/${empleadoId}`,
+    stats: '/api/rrhh/endowment/stats',
+    empleado: {
+      historial: (empleadoId: string) => `/api/rrhh/endowment/empleados/${empleadoId}/historial`,
+      itemsActivos: (empleadoId: string) => `/api/rrhh/endowment/empleados/${empleadoId}/items-activos`,
+      resumen: (empleadoId: string) => `/api/rrhh/endowment/empleados/${empleadoId}/resumen`,
+    },
+    areas: {
+      estadisticas: (areaId: string) => `/api/rrhh/endowment/areas/${areaId}/estadisticas`,
+      empleadosConDotacion: (areaId: string) => `/api/rrhh/endowment/areas/${areaId}/empleados-con-dotacion`,
+    },
+    reportes: {
+      entregasPendientes: '/api/rrhh/endowment/reportes/entregas-pendientes',
+      itemsMasEntregados: (limit?: number) => `/api/rrhh/endowment/reportes/items-mas-entregados${typeof limit === 'number' ? `?limit=${limit}` : ''}`,
+      valorTotalDotacion: '/api/rrhh/endowment/reportes/valor-total-dotacion',
+    }
+  }
 } as const;

@@ -7,6 +7,9 @@ import { getModelos, deleteModelo, getModelosStats } from '@/lib/service-cliente
 import type { Modelo, ModelosStats, EmpleadoBasico } from '@/lib/service-clientes/types';
 import { ESTADOS_MODELO } from '@/lib/service-clientes/constants';
 import { Plus, Search, Filter, Eye, Edit, Trash2, UserCheck, TrendingUp, Users as UsersIcon } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Select, SelectField } from '@/components/ui/selectUI';
+import ModeloModal from '@/components/clientes/ModeloModal';
 
 export default function ModelosPage() {
   const router = useRouter();
@@ -17,6 +20,10 @@ export default function ModelosPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterEstado, setFilterEstado] = React.useState<string>('all');
   const [showInactive, setShowInactive] = React.useState(false);
+  
+  // Estados para el modal
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [editingModelo, setEditingModelo] = React.useState<Modelo | null>(null);
 
   const loadData = React.useCallback(async () => {
     if (!ready || !token) return;
@@ -85,6 +92,22 @@ export default function ModelosPage() {
     return `${sc.nombre} ${sc.apellido}`;
   };
 
+  // Funciones para manejar el modal
+  const handleOpenModal = (modelo?: Modelo) => {
+    setEditingModelo(modelo || null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingModelo(null);
+  };
+
+  const handleModalSuccess = () => {
+    handleCloseModal();
+    loadData(); // Recargar los datos después de crear/editar
+  };
+
   if (!ready) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -109,17 +132,14 @@ export default function ModelosPage() {
             Gestiona el registro y equipo asignado a cada modelo
           </p>
         </div>
-        <button
-          onClick={() => router.push('/clientes/modelos/nuevo')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm"
-          style={{
-            background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))',
-            color: '#ffffff',
-          }}
+        <Button
+          onClick={() => handleOpenModal()}
+          variant="primary"
+          size="md"
+          icon={<Plus size={18} />}
         >
-          <Plus size={18} />
           Nueva Modelo
-        </button>
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -196,34 +216,29 @@ export default function ModelosPage() {
         </div>
         
         <div className="flex gap-2">
-          <select
+          <Select
             value={filterEstado}
-            onChange={(e) => setFilterEstado(e.target.value)}
-            className="px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-            style={{
-              background: 'var(--surface)',
-              borderColor: 'var(--border)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            <option value="all">Todos los estados</option>
-            {ESTADOS_MODELO.map((estado) => (
-              <option key={estado.value} value={estado.value}>{estado.label}</option>
-            ))}
-          </select>
+            onChange={setFilterEstado}
+            options={[
+              { value: 'all', label: 'Todos los estados' },
+              ...ESTADOS_MODELO.map((estado) => ({
+                value: estado.value,
+                label: estado.label
+              }))
+            ]}
+            placeholder="Filtrar por estado"
+            size="md"
+            fullWidth
+          />
 
-          <button
+          <Button
             onClick={() => setShowInactive(!showInactive)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all duration-200"
-            style={{
-              background: showInactive ? 'var(--ot-blue-50)' : 'var(--surface)',
-              borderColor: showInactive ? 'var(--ot-blue-500)' : 'var(--border)',
-              color: showInactive ? 'var(--ot-blue-700)' : 'var(--text-secondary)',
-            }}
+            variant={showInactive ? 'primary' : 'neutral'}
+            size="md"
+            icon={<Filter size={18} />}
           >
-            <Filter size={18} />
             {showInactive ? 'Todas' : 'Solo activas'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -313,30 +328,27 @@ export default function ModelosPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button
+                          <Button
                             onClick={() => router.push(`/clientes/modelos/${modelo._id}`)}
-                            className="p-2 rounded-lg transition-all duration-200"
-                            style={{ border: '1px solid var(--border)' }}
-                            title="Ver detalle"
-                          >
-                            <Eye size={16} style={{ color: 'var(--text-secondary)' }} />
-                          </button>
-                          <button
-                            onClick={() => router.push(`/clientes/modelos/${modelo._id}/editar`)}
-                            className="p-2 rounded-lg transition-all duration-200"
-                            style={{ border: '1px solid var(--border)' }}
-                            title="Editar"
-                          >
-                            <Edit size={16} style={{ color: 'var(--ot-blue-600)' }} />
-                          </button>
-                          <button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Eye size={16} />}
+                            ariaLabel="Ver detalle"
+                          />
+                          <Button
+                            onClick={() => handleOpenModal(modelo)}
+                            variant="ghost"
+                            size="sm"
+                            icon={<Edit size={16} />}
+                            ariaLabel="Editar"
+                          />
+                          <Button
                             onClick={() => handleDelete(modelo._id, modelo.nombreCompleto)}
-                            className="p-2 rounded-lg transition-all duration-200"
-                            style={{ border: '1px solid var(--border)' }}
-                            title="Eliminar"
-                          >
-                            <Trash2 size={16} style={{ color: '#ef4444' }} />
-                          </button>
+                            variant="ghost"
+                            size="sm"
+                            icon={<Trash2 size={16} />}
+                            ariaLabel="Eliminar"
+                          />
                         </div>
                       </td>
                     </tr>
@@ -347,6 +359,17 @@ export default function ModelosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {token && (
+        <ModeloModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          editingModelo={editingModelo}
+          token={token}
+        />
+      )}
     </div>
   );
 }

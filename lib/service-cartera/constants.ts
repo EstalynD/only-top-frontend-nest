@@ -7,6 +7,7 @@ import { EstadoFactura, MetodoPago, TipoRecordatorio, EstadoRecordatorio } from 
 // ========== LABELS ==========
 
 export const ESTADO_FACTURA_LABELS: Record<EstadoFactura, string> = {
+  [EstadoFactura.SEGUIMIENTO]: 'En Seguimiento',
   [EstadoFactura.PENDIENTE]: 'Pendiente',
   [EstadoFactura.PARCIAL]: 'Pago Parcial',
   [EstadoFactura.PAGADO]: 'Pagado',
@@ -38,6 +39,7 @@ export const ESTADO_RECORDATORIO_LABELS: Record<EstadoRecordatorio, string> = {
 // ========== COLORES ==========
 
 export const ESTADO_FACTURA_COLORS: Record<EstadoFactura, string> = {
+  [EstadoFactura.SEGUIMIENTO]: 'info',
   [EstadoFactura.PENDIENTE]: 'warning',
   [EstadoFactura.PARCIAL]: 'primary',
   [EstadoFactura.PAGADO]: 'success',

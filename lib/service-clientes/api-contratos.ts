@@ -158,12 +158,13 @@ export async function getCommissionScales(token: string): Promise<CommissionScal
 // ========== FIRMA PÚBLICA (Sin autenticación) ==========
 
 export async function obtenerContratoPorToken(token: string): Promise<ContratoModelo> {
-  return requestJSON<{ success: boolean; data: ContratoModelo }>(
+  // requestJSON ya desenvuelve la respuesta { success, data } automáticamente
+  return requestJSON<ContratoModelo>(
     CLIENTES_ROUTES.firmaPublica.obtenerContrato(token),
     {
       cache: 'no-store',
     }
-  ).then(res => res.data);
+  );
 }
 
 export async function solicitarOtpPorToken(token: string): Promise<{ success: boolean; message: string }> {

@@ -17,9 +17,16 @@ import {
   Edit2,
   Trash2,
   DollarSign,
-  AlertCircle 
+  AlertCircle,
+  Building2,
+  Hash,
+  Settings
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import { useModal } from '@/lib/hooks/useModal';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
+import { useTheme } from '@/lib/theme';
 import BadgeEstado from './BadgeEstado';
 import ResumenCalculos from './ResumenCalculos';
 import Loader from '@/components/ui/Loader';
@@ -73,8 +80,45 @@ export default function ModalDetallesHorasExtras({
   // canPay = true,
 }: ModalDetallesHorasExtrasProps) {
   
+  // ========== HOOKS Y ESTADO ==========
+  const { toast } = useToast();
+  const { theme } = useTheme();
+  
+  // Usar el hook de modal mejorado
+  const modal = useModal({
+    preventBodyScroll: true,
+    closeOnEscape: true,
+    closeOnBackdropClick: true // Permitir cerrar al hacer click en backdrop para modales de solo lectura
+  });
+
+  // Helper styles for consistent styling
+  const cardStyle = {
+    background: 'var(--surface-muted)',
+    borderRadius: '0.5rem',
+    padding: '1rem',
+    border: '1px solid var(--border)'
+  };
+  
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    marginBottom: '0.25rem',
+    color: 'var(--text-muted)'
+  };
+
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [registro, setRegistro] = useState<HorasExtrasRegistro | null>(null);
+
+  // Sincronizar el estado del modal con las props
+  useEffect(() => {
+    if (isOpen && !modal.isOpen) {
+      modal.openModal();
+    } else if (!isOpen && modal.isOpen) {
+      modal.closeModal();
+    }
+  }, [isOpen, modal.isOpen]);
 
   useEffect(() => {
     if (isOpen && registroId) {
@@ -99,6 +143,7 @@ export default function ModalDetallesHorasExtras({
   }
 
   function handleClose() {
+    modal.closeModal();
     onClose();
     setTimeout(() => setRegistro(null), 300);
   }
@@ -126,132 +171,233 @@ export default function ModalDetallesHorasExtras({
   const mostrarAprobar = registro && canApprove && puedeAprobar(registro.estado);
   // const mostrarPagar = false; // flujo de pago removido
 
+  // Footer del modal con acciones
+  const modalFooter = (
+    <div className="flex flex-wrap gap-2 justify-end">
+      {mostrarEditar && onEdit && (
+        <Button
+          variant="primary"
+          onClick={() => { onEdit(registro!._id); handleClose(); }}
+          size="sm"
+        >
+          <Edit2 size={16} />
+          Editar
+        </Button>
+      )}
+      
+      {mostrarAprobar && onAprobar && (
+        <Button
+          variant="success"
+          onClick={() => { onAprobar(registro!._id); handleClose(); }}
+          size="sm"
+        >
+          <CheckCircle size={16} />
+          Aprobar/Rechazar
+        </Button>
+      )}
+      
+      {mostrarEliminar && onDelete && (
+        <Button
+          variant="danger"
+          onClick={() => { onDelete(registro!._id); handleClose(); }}
+          size="sm"
+        >
+          <Trash2 size={16} />
+          Eliminar
+        </Button>
+      )}
+      
+      <Button
+        variant="neutral"
+        onClick={handleClose}
+        size="sm"
+      >
+        <X size={16} />
+        Cerrar
+      </Button>
+    </div>
+  );
+
   // ========== RENDER ==========
   
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen={modal.isOpen}
       onClose={handleClose}
       title="Detalles de Horas Extras"
-      icon={<Clock size={22} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-4xl"
-    >
-      {loading ? (
-        <div className="p-8 flex justify-center">
-          <Loader />
+      icon={<Clock size={20} style={{ color: 'var(--ot-blue-500)' }} />}
+      maxWidth="6xl"
+      description="Información completa del registro de horas extras y sus cálculos."
+      footer={modalFooter}
+      closeOnBackdropClick={true}
+      closeOnEscape={true}
+      preventBodyScroll={true}
+      isLoading={loading}
+      loadingComponent={
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--ot-blue-500)' }}></div>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Cargando detalles del registro...
+          </p>
         </div>
-      ) : registro ? (
-        <div className="p-4 sm:p-6 space-y-6">
-          
-          {/* ========== INFORMACIÓN GENERAL ========== */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      }
+    >
+      {registro ? (
+        <div className="space-y-4 sm:space-y-6">
+          {/* Layout principal con dos columnas */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             
-            {/* Empleado */}
-            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-              <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg" style={{ background: 'var(--ot-blue-500)' }}>
-                  <User size={18} color="#ffffff" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Empleado
-                  </p>
-                  <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                    {empleadoNombre}
-                  </p>
-                  {typeof registro.empleadoId !== 'string' && registro.empleadoId.numeroIdentificacion && (
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                      CC: {registro.empleadoId.numeroIdentificacion}
+            {/* Columna Izquierda */}
+            <div className="space-y-4">
+              {/* Información del Empleado */}
+              <div className="rounded-lg p-3 sm:p-4" style={{ background: 'var(--surface-muted)' }}>
+                <h3 className="text-sm sm:text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <User size={16} />
+                  Información del Empleado
+                </h3>
+                <div className="space-y-2">
+                  <div>
+                    <label style={labelStyle}>Nombre</label>
+                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {empleadoNombre}
                     </p>
+                  </div>
+                  {typeof registro.empleadoId !== 'string' && registro.empleadoId.numeroIdentificacion && (
+                    <div>
+                      <label style={labelStyle}>Identificación</label>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                        CC: {registro.empleadoId.numeroIdentificacion}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-            
-            {/* Periodo */}
-            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-              <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg" style={{ background: 'var(--ot-purple-500)' }}>
-                  <Calendar size={18} color="#ffffff" />
+
+              {/* Información del Período */}
+              <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <Calendar size={16} />
+                  Información del Período
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label style={labelStyle}>Período</label>
+                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {formatPeriodo(registro.periodo)}
+                    </p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      Quincena {registro.quincena}
+                    </p>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Fecha de Registro</label>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {formatDate(registro.createdAt)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Periodo
-                  </p>
-                  <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {formatPeriodo(registro.periodo)}
-                  </p>
-                  <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                    Quincena {registro.quincena}
-                  </p>
+              </div>
+
+              {/* Estado y Salario */}
+              <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <Settings size={16} />
+                  Estado y Configuración
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label style={labelStyle}>Estado</label>
+                    <div className="mt-1">
+                      <BadgeEstado estado={registro.estado} size="md" />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Salario Base</label>
+                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      ${salarioBase.toLocaleString('es-CO')} {registro.salarioBase.moneda}
+                    </p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {registro.horasLaboralesMes} horas/mes
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-            
-            {/* Estado */}
-            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-              <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg" style={{ background: 'var(--text-muted)' }}>
-                  <FileText size={18} color="#ffffff" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Estado
-                  </p>
-                  <BadgeEstado estado={registro.estado} size="md" />
-                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-                    Registrado: {formatDate(registro.createdAt)}
-                  </p>
-                </div>
+
+            {/* Columna Derecha */}
+            <div className="space-y-4">
+              {/* Resumen de Cálculos */}
+              <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <Hash size={16} />
+                  Resumen de Cálculos
+                </h3>
+                <ResumenCalculos
+                  salarioBase={salarioBase}
+                  horasLaboralesMes={registro.horasLaboralesMes}
+                  totalHoras={registro.totalHoras}
+                  totalRecargoCOP={totalRecargoFormateado}
+                  moneda={monedaSalario}
+                />
               </div>
-            </div>
-            
-            {/* Salario Base */}
-            <div className="p-4 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-              <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg" style={{ background: 'var(--ot-green-500)' }}>
-                  <DollarSign size={18} color="#ffffff" />
+
+              {/* Historial de Aprobación */}
+              {registro.aprobacion && (
+                <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+                  <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                    {registro.estado === 'APROBADO' ? (
+                      <CheckCircle size={16} style={{ color: 'var(--ot-green-500)' }} />
+                    ) : (
+                      <XCircle size={16} style={{ color: 'var(--ot-red-500)' }} />
+                    )}
+                    Historial de Aprobación
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label style={labelStyle}>Aprobado por</label>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                          {typeof registro.aprobacion.aprobadoPor === 'string' 
+                            ? registro.aprobacion.aprobadoPor 
+                            : registro.aprobacion.aprobadoPor?.username || 'N/A'}
+                        </p>
+                      </div>
+                      {registro.aprobacion.fechaAprobacion && (
+                        <div>
+                          <label style={labelStyle}>Fecha de Aprobación</label>
+                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                            {formatDateTime(registro.aprobacion.fechaAprobacion)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {registro.aprobacion.comentarios && (
+                      <div>
+                        <label style={labelStyle}>Comentarios</label>
+                        <div className="mt-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                          <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                            {registro.aprobacion.comentarios}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Salario Base
-                  </p>
-                  <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    ${salarioBase.toLocaleString('es-CO')} {registro.salarioBase.moneda}
-                  </p>
-                  <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {registro.horasLaboralesMes} horas/mes
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
-            
           </div>
-          
-          {/* ========== RESUMEN DE CÁLCULOS ========== */}
-          <div className="border rounded-lg p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-            <ResumenCalculos
-              salarioBase={salarioBase}
-              horasLaboralesMes={registro.horasLaboralesMes}
-              totalHoras={registro.totalHoras}
-              totalRecargoCOP={totalRecargoFormateado}
-              moneda={monedaSalario}
-            />
-          </div>
-          
-          {/* ========== DETALLES DE HORAS EXTRAS ========== */}
-          <div>
-            <h3 
-              className="text-base font-semibold mb-3 flex items-center"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              <Clock size={18} className="mr-2" style={{ color: 'var(--ot-blue-500)' }} />
-              Detalles de Horas ({registro.detalles.length})
+
+          {/* Detalles de Horas Extras - Ancho completo */}
+          <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Clock size={16} />
+              Detalles de Horas Extras ({registro.detalles.length})
             </h3>
             
             <div className="space-y-3">
               {registro.detalles.map((detalle, index) => {
-                // Backend devuelve valores ya formateados, usar directamente
                 const totalDetalleFormateado = detalle.total || '$ 0.00';
                 
                 return (
@@ -329,128 +475,10 @@ export default function ModalDetallesHorasExtras({
               })}
             </div>
           </div>
-          
-          {/* ========== HISTORIAL DE APROBACIÓN ========== */}
-          {registro.aprobacion && (
-            <div className="border rounded-lg p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
-              <h3 
-                className="text-base font-semibold mb-3 flex items-center"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                {registro.estado === 'APROBADO' ? (
-                  <CheckCircle size={18} className="mr-2" style={{ color: 'var(--ot-green-500)' }} />
-                ) : (
-                  <XCircle size={18} className="mr-2" style={{ color: 'var(--ot-red-500)' }} />
-                )}
-                Historial de Aprobación
-              </h3>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      Aprobado por:
-                    </p>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {typeof registro.aprobacion.aprobadoPor === 'string' 
-                        ? registro.aprobacion.aprobadoPor 
-                        : registro.aprobacion.aprobadoPor?.username || 'N/A'}
-                    </p>
-                  </div>
-                  {registro.aprobacion.fechaAprobacion && (
-                    <div className="text-right">
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                        Fecha:
-                      </p>
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        {formatDateTime(registro.aprobacion.fechaAprobacion)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                
-                {registro.aprobacion.comentarios && (
-                  <div className="mt-3 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
-                      Comentarios:
-                    </p>
-                    <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                      {registro.aprobacion.comentarios}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Información de pago removida por cambio de negocio */}
-          
-          {/* ========== FOOTER CON ACCIONES ========== */}
-          <div 
-            className="flex flex-wrap gap-2 pt-4 border-t"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            {mostrarEditar && onEdit && (
-              <button
-                onClick={() => { onEdit(registro._id); handleClose(); }}
-                className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                style={{
-                  background: 'var(--ot-blue-500)',
-                  color: '#ffffff',
-                }}
-              >
-                <Edit2 size={16} className="mr-2" />
-                Editar
-              </button>
-            )}
-            
-            {mostrarAprobar && onAprobar && (
-              <button
-                onClick={() => { onAprobar(registro._id); handleClose(); }}
-                className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                style={{
-                  background: 'var(--ot-green-500)',
-                  color: '#ffffff',
-                }}
-              >
-                <CheckCircle size={16} className="mr-2" />
-                Aprobar/Rechazar
-              </button>
-            )}
-            
-            {/* Acción de pago removida */}
-            
-            {mostrarEliminar && onDelete && (
-              <button
-                onClick={() => { onDelete(registro._id); handleClose(); }}
-                className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                style={{
-                  background: 'var(--ot-red-500)',
-                  color: '#ffffff',
-                }}
-              >
-                <Trash2 size={16} className="mr-2" />
-                Eliminar
-              </button>
-            )}
-            
-            <button
-              onClick={handleClose}
-              className="ml-auto px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-              style={{
-                background: 'var(--surface-muted)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              <X size={16} className="mr-2" />
-              Cerrar
-            </button>
-          </div>
-          
         </div>
       ) : (
-        <div className="p-8 text-center">
-          <AlertCircle size={48} className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+        <div className="flex flex-col items-center gap-4 py-8">
+          <AlertCircle size={48} style={{ color: 'var(--text-muted)' }} />
           <p style={{ color: 'var(--text-primary)' }}>No se pudo cargar el registro</p>
         </div>
       )}

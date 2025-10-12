@@ -171,7 +171,7 @@ export function RegistrarPagoModal({ isOpen, onClose, factura, onSubmit }: Regis
       onClose={onClose}
       title="Registrar Pago"
       icon={<DollarSign size={20} style={{ color: 'var(--text-primary)' }} />}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-5">
         {/* Info de la factura */}

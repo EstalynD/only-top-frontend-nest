@@ -20,7 +20,7 @@ export function getDocumentosByEmpleado(empleadoId: string, token: string, filtr
   const queryString = params.toString();
   const url = queryString ? `${RRHH_ROUTES.documentosByEmpleado(empleadoId)}?${queryString}` : RRHH_ROUTES.documentosByEmpleado(empleadoId);
 
-  return requestJSON<{ success: boolean; data: Documento[] }>(url, {
+  return requestJSON<Documento[]>(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -52,7 +52,7 @@ export function createDocumento(data: CreateDocumentoDto, archivo: File, token: 
   if (data.requiereRenovacion !== undefined) formData.append('requiereRenovacion', data.requiereRenovacion.toString());
   if (data.diasAntesVencimiento) formData.append('diasAntesVencimiento', data.diasAntesVencimiento.toString());
 
-  return requestJSON<{ success: boolean; message: string; data: Documento }>(RRHH_ROUTES.documentos, {
+  return requestJSON<Documento>(RRHH_ROUTES.documentos, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -126,7 +126,7 @@ export function marcarDocumentosVencidos(token: string) {
 
 // Obtener estadísticas de documentos por empleado
 export function getEstadisticasDocumentos(empleadoId: string, token: string) {
-  return requestJSON<{ success: boolean; data: DocumentosStats }>(RRHH_ROUTES.estadisticasDocumentos(empleadoId), {
+  return requestJSON<DocumentosStats>(RRHH_ROUTES.estadisticasDocumentos(empleadoId), {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -152,7 +152,7 @@ export function buscarDocumentos(filtros: DocumentosFiltros, token: string) {
 
 // Descargar documento
 export function descargarDocumento(id: string, token: string) {
-  return requestJSON<{ success: boolean; data: { url: string; nombre: string; formato: string; tamaño: number } }>(RRHH_ROUTES.descargarDocumento(id), {
+  return requestJSON<{ url: string; nombre: string; formato: string; tamaño: number }>(RRHH_ROUTES.descargarDocumento(id), {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

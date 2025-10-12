@@ -33,3 +33,36 @@ export const HIERARCHY_LEVELS = [
   { value: 4, label: 'Nivel 4 - Operativo' },
   { value: 5, label: 'Nivel 5 - Apoyo' },
 ] as const;
+
+// ========== Endowment (Dotación) ==========
+export const ENDOWMENT_CONSTANTS = {
+  labels: {
+    endowment: 'Dotación',
+    categories: 'Categorías',
+    items: 'Elementos',
+    tracking: 'Seguimiento',
+    stats: 'Estadísticas',
+  },
+  actions: {
+    ENTREGA: 'Entrega',
+    DEVOLUCION: 'Devolución',
+    MANTENIMIENTO: 'Mantenimiento',
+    REPARACION: 'Reparación',
+    REEMPLAZO: 'Reemplazo',
+  },
+  colors: {
+    primary: '#1e338a',
+    accent: '#1c3fb8',
+  },
+  messages: {
+    categoryCreated: 'Categoría creada',
+    itemCreated: 'Elemento creado',
+    trackingCreated: 'Seguimiento registrado',
+    categoryUpdated: 'Categoría actualizada',
+    itemUpdated: 'Elemento actualizado',
+    trackingUpdated: 'Seguimiento actualizado',
+    categoryDeleted: 'Categoría eliminada',
+    itemDeleted: 'Elemento eliminado',
+    trackingDeleted: 'Seguimiento eliminado',
+  }
+} as const;

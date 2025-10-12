@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Info,
 } from 'lucide-react';
 import type { Factura, EstadoFactura, FiltrosFacturasDto } from '@/lib/service-cartera';
 import {
@@ -147,6 +148,8 @@ export function FacturasTable({
 
   const getEstadoIcon = (estado: EstadoFactura) => {
     switch (estado) {
+      case 'SEGUIMIENTO':
+        return <Info size={16} className="text-cyan-500" />;
       case 'PAGADO':
         return <CheckCircle size={16} className="text-green-500" />;
       case 'VENCIDO':
@@ -162,6 +165,7 @@ export function FacturasTable({
 
   const getEstadoBadgeStyle = (estado: EstadoFactura): React.CSSProperties => {
     const colorMap: Record<EstadoFactura, string> = {
+      SEGUIMIENTO: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400',
       PENDIENTE: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
       PARCIAL: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
       PAGADO: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',

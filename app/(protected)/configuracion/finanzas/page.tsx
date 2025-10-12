@@ -989,7 +989,7 @@ export default function FinanzasPage() {
 
           <Input
             label="Descripción (opcional)"
-            value={processorForm.description}
+            value={processorForm.description || ''}
             onChange={(e) => setProcessorForm(prev => ({ ...prev, description: e.target.value }))}
             placeholder="Notas adicionales sobre el procesador"
           />
@@ -1033,7 +1033,7 @@ export default function FinanzasPage() {
         onClose={() => setShowScaleModal(false)}
         title={editingScale ? 'Editar Escala' : 'Nueva Escala'}
         icon={<TrendingUp size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-4xl"
+        maxWidth="4xl"
       >
         <form onSubmit={handleScaleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1047,7 +1047,7 @@ export default function FinanzasPage() {
 
             <Input
               label="Descripción (opcional)"
-              value={scaleForm.description}
+              value={scaleForm.description || ''}
               onChange={(e) => setScaleForm(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Descripción de la escala"
             />
@@ -1190,7 +1190,7 @@ export default function FinanzasPage() {
         onClose={() => setShowInternalModal(false)}
         title="Configurar Comisiones Internas"
         icon={<Users size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-4xl"
+        maxWidth="4xl"
       >
         <form onSubmit={handleInternalCommissionsSubmit} className="p-6 space-y-6">
           {/* Sales Closer */}
@@ -1387,7 +1387,7 @@ export default function FinanzasPage() {
         onClose={() => setShowInternalCalculatorModal(false)}
         title="Calculadora de Comisiones Internas"
         icon={<Calculator size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-3xl"
+        maxWidth="3xl"
       >
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

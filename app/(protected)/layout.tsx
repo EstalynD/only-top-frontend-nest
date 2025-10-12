@@ -34,36 +34,43 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   return (
     <ToastProvider>
-      <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-background)', color: 'var(--color-foreground)' }}>
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
-        <div className="flex-1">
-          {/* Grid desktop: 18rem sidebar + contenido */}
-          <div className="hidden md:grid md:grid-cols-[18rem_1fr] md:gap-0">
-            <Sidebar variant="desktop" />
-            <main className="p-4">{children}</main>
-          </div>
+        
+        {/* Desktop Layout */}
+        <div className="hidden md:flex min-h-[calc(100vh-4rem)]">
+          <Sidebar variant="desktop" />
+          <main className="flex-1 overflow-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              {children}
+            </div>
+          </main>
+        </div>
 
-          {/* Stack móvil */}
-          <div className="md:hidden relative">
-            {/* Sidebar móvil con overlay */}
-            {sidebarOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40 md:hidden"
-                  style={{ background: 'rgba(0,0,0,0.35)' }}
-                  onClick={() => setSidebarOpen(false)}
-                />
-                <Sidebar
-                  variant="mobile"
-                  open={sidebarOpen}
-                  onClose={() => setSidebarOpen(false)}
-                />
-              </>
-            )}
+        {/* Mobile Layout */}
+        <div className="md:hidden min-h-[calc(100vh-4rem)] relative">
+          {/* Mobile Sidebar Overlay */}
+          {sidebarOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                onClick={() => setSidebarOpen(false)}
+                aria-hidden="true"
+              />
+              <Sidebar
+                variant="mobile"
+                open={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+              />
+            </>
+          )}
 
-            {/* Contenido */}
-            <main className="p-4">{children}</main>
-          </div>
+          {/* Mobile Content */}
+          <main className="overflow-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              {children}
+            </div>
+          </main>
         </div>
       </div>
     </ToastProvider>

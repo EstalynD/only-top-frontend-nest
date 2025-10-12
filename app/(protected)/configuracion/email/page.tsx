@@ -3,6 +3,7 @@ import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
 import { 
@@ -23,7 +24,9 @@ import {
   Eye,
   EyeOff,
   Shield,
-  Server
+  Server,
+  Cake,
+  Palette
 } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
 
@@ -38,6 +41,7 @@ export default function EmailConfigPage() {
   const [verifying, setVerifying] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('smtp-config');
 
   // Formulario
   const [form, setForm] = React.useState<EmailConfigRequest>({
@@ -54,6 +58,20 @@ export default function EmailConfigPage() {
   });
 
   const [testEmailAddress, setTestEmailAddress] = React.useState('');
+
+  // Definición de tabs
+  const tabs = [
+    {
+      id: 'smtp-config',
+      label: 'Configuración Email',
+      icon: <Settings size={16} />
+    },
+    {
+      id: 'birthday-templates',
+      label: 'Plantillas de Cumpleaños',
+      icon: <Cake size={16} />
+    }
+  ];
 
   // Cargar configuración inicial
   React.useEffect(() => {
@@ -213,11 +231,17 @@ export default function EmailConfigPage() {
           Configuración de Email
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Configura el servicio de email usando Brevo SMTP para envío de notificaciones del sistema.
+          Configura el servicio de email y plantillas para notificaciones del sistema.
         </p>
       </div>
 
-      {/* Estado del servicio */}
+      {/* Tabs */}
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Tab Content */}
+      {activeTab === 'smtp-config' && (
+        <TabPanel>
+          {/* Estado del servicio */}
       <Card>
         <div className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -262,7 +286,7 @@ export default function EmailConfigPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Host SMTP"
-              value={form.host}
+              value={form.host || ''}
               onChange={(e) => setForm(prev => ({ ...prev, host: e.target.value }))}
               placeholder="smtp-relay.brevo.com"
               required
@@ -281,7 +305,7 @@ export default function EmailConfigPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Usuario SMTP / Login"
-              value={form.authUser}
+              value={form.authUser || ''}
               onChange={(e) => setForm(prev => ({ ...prev, authUser: e.target.value }))}
               placeholder="tu-email@dominio.com"
               required
@@ -291,7 +315,7 @@ export default function EmailConfigPage() {
               <Input
                 label="Password / API Key"
                 type={showPassword ? 'text' : 'password'}
-                value={form.authPass}
+                value={form.authPass || ''}
                 onChange={(e) => setForm(prev => ({ ...prev, authPass: e.target.value }))}
                 placeholder="Tu clave SMTP de Brevo"
                 required
@@ -330,7 +354,7 @@ export default function EmailConfigPage() {
             <Input
               label="Email remitente (From)"
               type="email"
-              value={form.from}
+              value={form.from || ''}
               onChange={(e) => setForm(prev => ({ ...prev, from: e.target.value }))}
               placeholder="noreply@tudominio.com"
               required
@@ -417,6 +441,268 @@ export default function EmailConfigPage() {
           </div>
         </Card>
       )}
+        </TabPanel>
+      )}
+
+      {activeTab === 'birthday-templates' && (
+        <TabPanel>
+          <BirthdayTemplatesContent />
+        </TabPanel>
+      )}
+    </div>
+  );
+}
+
+// Componente para el contenido de plantillas de cumpleaños
+function BirthdayTemplatesContent() {
+  const [selectedTemplate, setSelectedTemplate] = React.useState('template-1');
+  const [previewMode, setPreviewMode] = React.useState<'boss' | 'employee'>('employee');
+
+  const templates = [
+    {
+      id: 'template-1',
+      name: 'Plantilla Corporativa',
+      description: 'Diseño profesional con colores corporativos',
+      preview: 'template-1'
+    },
+    {
+      id: 'template-2', 
+      name: 'Plantilla Festiva',
+      description: 'Diseño más colorido y celebrativo',
+      preview: 'template-2'
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Cake size={20} style={{ color: 'var(--ot-blue-500)' }} />
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+          Plantillas de Cumpleaños
+        </h2>
+      </div>
+
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        Selecciona y personaliza las plantillas para los recordatorios de cumpleaños que se enviarán automáticamente.
+      </p>
+
+      {/* Template Selection */}
+      <Card>
+        <div className="p-6">
+          <h3 className="font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
+            Seleccionar Plantilla
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                  selectedTemplate === template.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setSelectedTemplate(template.id)}
+                style={{
+                  borderColor: selectedTemplate === template.id ? 'var(--ot-blue-500)' : 'var(--border)',
+                  backgroundColor: selectedTemplate === template.id ? 'rgba(28, 65, 217, 0.05)' : 'transparent'
+                }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Palette size={16} style={{ color: 'var(--ot-blue-500)' }} />
+                  <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {template.name}
+                  </h4>
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {template.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Preview Controls */}
+      <Card>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>
+              Vista Previa
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant={previewMode === 'employee' ? 'primary' : 'neutral'}
+                size="sm"
+                onClick={() => setPreviewMode('employee')}
+              >
+                Empleado
+              </Button>
+              <Button
+                variant={previewMode === 'boss' ? 'primary' : 'neutral'}
+                size="sm"
+                onClick={() => setPreviewMode('boss')}
+              >
+                Jefe Inmediato
+              </Button>
+            </div>
+          </div>
+
+          {/* Email Preview */}
+          <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+            <div className="bg-gray-50 p-3 border-b" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center gap-2 text-sm">
+                <Mail size={14} />
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {previewMode === 'employee' ? 'Para: empleado@empresa.com' : 'Para: jefe@empresa.com'}
+                </span>
+              </div>
+            </div>
+            <div className="p-4">
+              <BirthdayEmailPreview template={selectedTemplate} mode={previewMode} />
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Configuration Info */}
+      <Card>
+        <div className="p-6">
+          <h3 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
+            Configuración Automática
+          </h3>
+          <div className="space-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <p>• Los recordatorios se envían automáticamente 2 días antes del cumpleaños</p>
+            <p>• Se envía al empleado (correo personal y corporativo)</p>
+            <p>• Se envía al jefe inmediato para coordinación</p>
+            <p>• El sistema verifica automáticamente las fechas de cumpleaños</p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// Componente de preview del email de cumpleaños
+function BirthdayEmailPreview({ template, mode }: { template: string; mode: 'boss' | 'employee' }) {
+  const isBoss = mode === 'boss';
+  
+  if (template === 'template-1') {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div style={{ 
+          background: 'linear-gradient(135deg, var(--ot-blue-500) 0%, var(--ot-blue-600) 100%)',
+          padding: '20px',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          <h1 style={{ margin: '0 0 10px', fontSize: '24px', fontWeight: 'bold' }}>OnlyTop</h1>
+          <p style={{ margin: '0', fontSize: '14px', opacity: 0.9 }}>Sistema de Gestión de RRHH</p>
+        </div>
+        
+        <div style={{ padding: '30px 20px', backgroundColor: 'white' }}>
+          <h2 style={{ color: '#333', margin: '0 0 20px', fontSize: '20px' }}>
+            {isBoss ? 'Recordatorio de Cumpleaños' : '¡Feliz Cumpleaños!'}
+          </h2>
+          
+          <p style={{ color: '#555', lineHeight: 1.6, margin: '0 0 20px' }}>
+            {isBoss 
+              ? 'Le recordamos que el empleado Juan Pérez cumple años en 2 días (15 de Marzo).'
+              : '¡Esperamos que tengas un día maravilloso lleno de alegría y celebraciones!'
+            }
+          </p>
+
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            padding: '20px',
+            borderRadius: '8px',
+            margin: '20px 0',
+            border: '1px solid #e9ecef'
+          }}>
+            <h3 style={{ color: '#333', margin: '0 0 10px', fontSize: '16px' }}>
+              {isBoss ? 'Información del Empleado' : 'Detalles'}
+            </h3>
+            <p style={{ color: '#666', margin: '0', fontSize: '14px' }}>
+              {isBoss 
+                ? '• Nombre: Juan Pérez\n• Área: Desarrollo\n• Cargo: Desarrollador Senior\n• Fecha: 15 de Marzo'
+                : '• Fecha: 15 de Marzo\n• Edad: 28 años\n• Área: Desarrollo'
+              }
+            </p>
+          </div>
+
+          {isBoss && (
+            <div style={{
+              backgroundColor: '#e3f2fd',
+              borderLeft: '4px solid var(--ot-blue-500)',
+              padding: '15px',
+              margin: '20px 0'
+            }}>
+              <p style={{ color: '#1565c0', margin: '0', fontSize: '14px' }}>
+                💡 <strong>Sugerencia:</strong> Considere organizar una pequeña celebración o enviar un mensaje personal.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Template 2 - Festiva
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div style={{ 
+        background: 'linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%)',
+        padding: '20px',
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <h1 style={{ margin: '0 0 10px', fontSize: '24px', fontWeight: 'bold' }}>🎉 OnlyTop</h1>
+        <p style={{ margin: '0', fontSize: '14px', opacity: 0.9 }}>¡Celebrando contigo!</p>
+      </div>
+      
+      <div style={{ padding: '30px 20px', backgroundColor: 'white' }}>
+        <h2 style={{ color: '#333', margin: '0 0 20px', fontSize: '20px' }}>
+          {isBoss ? '🎂 ¡Cumpleaños Próximo!' : '🎈 ¡Feliz Cumpleaños!'}
+        </h2>
+        
+        <p style={{ color: '#555', lineHeight: 1.6, margin: '0 0 20px' }}>
+          {isBoss 
+            ? '¡Se acerca una fecha muy especial! Juan Pérez cumple años en 2 días.'
+            : '¡Que este nuevo año de vida esté lleno de éxitos, alegría y momentos inolvidables!'
+          }
+        </p>
+
+        <div style={{
+          background: 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%)',
+          padding: '20px',
+          borderRadius: '12px',
+          margin: '20px 0',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '10px' }}>🎂</div>
+          <h3 style={{ color: '#2d3436', margin: '0 0 10px', fontSize: '18px' }}>
+            {isBoss ? '15 de Marzo' : '¡Cumples 28 años!'}
+          </h3>
+          <p style={{ color: '#636e72', margin: '0', fontSize: '14px' }}>
+            {isBoss ? 'Fecha de cumpleaños' : 'Que sea un día espectacular'}
+          </p>
+        </div>
+
+        {isBoss && (
+          <div style={{
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            padding: '15px',
+            borderRadius: '8px',
+            margin: '20px 0'
+          }}>
+            <p style={{ color: '#856404', margin: '0', fontSize: '14px' }}>
+              🎁 <strong>Idea:</strong> ¿Por qué no organizar una sorpresa o enviar un mensaje de felicitación?
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

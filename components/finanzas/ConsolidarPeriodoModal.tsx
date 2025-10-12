@@ -112,7 +112,7 @@ export function ConsolidarPeriodoModal({
       onClose={onClose}
       title={`Consolidar Periodo - ${periodoString}`}
       icon={headerIcon}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <div className="p-6 space-y-6">
           {/* Advertencia Principal */}

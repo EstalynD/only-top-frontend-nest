@@ -84,34 +84,37 @@ export interface GastoFijoFormateadoDto {
   mes: number;
   anio: number;
   quincena: QuincenaEnum;
+  periodoId: string;
   categoria: CategoriaGasto;
   
+  // Montos
   montoUSD: number; // Backend devuelve number
-  montoOriginalUSD: string; // Alias para compatibilidad
   montoFormateado: string;
   
+  // Información básica
   concepto: string;
   fechaPago: string;
   estado: EstadoGasto;
   
+  // Empleado (si aplica)
   empleadoId?: string;
   empleadoNombre?: string;
   
-  numeroFactura?: string;
-  archivoComprobante?: string;
+  // Documentación
+  numeroFactura?: string | null;
+  archivoComprobante?: string | null;
+  proveedor?: string | null;
   
-  registradoPor: string; // Backend usa este nombre
-  creadoPor: string; // Alias para compatibilidad
-  fechaRegistro: string; // Backend usa este nombre
-  fechaCreacion: string; // Alias para compatibilidad
+  // Auditoría - Registro
+  registradoPor: string;
+  fechaRegistro: string;
   
-  aprobadoPor?: string;
-  fechaAprobacion?: string;
-  notas?: string; // Backend usa este nombre
-  notasAprobacion?: string; // Alias para compatibilidad
+  // Auditoría - Aprobación
+  aprobadoPor?: string | null;
+  fechaAprobacion?: string | null;
+  notas?: string | null;
   
-  periodoId: string;
-  proveedor?: string;
+  // Metadata adicional
   meta?: any;
 }
 
@@ -131,6 +134,7 @@ export interface ResumenQuincenalDto {
   
   porCategoria: Array<{
     categoria: CategoriaGasto;
+    totalUSD: number;
     totalFormateado: string;
     cantidad: number;
     porcentaje: number;
@@ -147,74 +151,92 @@ export interface ResumenQuincenalDto {
 export interface ResumenMensualConsolidadoDto {
   mes: number;
   anio: number;
+  periodoId: string;
   
   primeraQuincena: {
+    totalUSD: number;
     totalFormateado: string;
     cantidadGastos: number;
   };
   
   segundaQuincena: {
+    totalUSD: number;
     totalFormateado: string;
     cantidadGastos: number;
   };
   
-  totalGastosFormateado: string;
-  totalIngresosFormateado: string;
+  totalGastosMensual: {
+    totalUSD: number;
+    totalFormateado: string;
+    cantidadGastos: number;
+  };
+  
+  totalIngresos: {
+    totalUSD: number;
+    totalFormateado: string;
+  };
   
   // 🎯 UTILIDAD NETA CON COLOR
   utilidadNeta: {
-    montoFormateado: string;
-    indicadorColor: 'verde' | 'rojo';
-    esPositivo: boolean;
+    totalUSD: number;
+    totalFormateado: string;
+    esPositiva: boolean;
+    color: 'verde' | 'rojo';
   };
   
   // 📊 COMPARATIVA MES ANTERIOR
-  comparativa: {
+  comparativa?: {
     mesAnterior: string;
-    utilidadAnteriorFormateada: string;
+    utilidadMesAnteriorUSD: number;
+    utilidadMesAnteriorFormateado: string;
     porcentajeCrecimiento: number;
     direccion: 'crecimiento' | 'decrecimiento' | 'neutro';
-    indicadorColor: 'verde' | 'rojo' | 'gris';
   };
   
   // Desglose por categoría
   desgloseCategoria: Array<{
     categoria: CategoriaGasto;
-    primeraQuincenaFormateada: string;
-    segundaQuincenaFormateada: string;
-    totalCategoriaFormateado: string;
-    porcentajeDelTotal: number;
+    primeraQuincenaUSD: number;
+    segundaQuincenaUSD: number;
+    totalUSD: number;
+    totalFormateado: string;
+    cantidad: number;
+    porcentaje: number;
   }>;
   
   estado: EstadoResumen;
-  consolidado: boolean;
-  
-  consolidadoPor?: string;
   fechaConsolidacion?: string;
+  
+  meta?: {
+    mayorGasto?: {
+      concepto: string;
+      montoFormateado: string;
+      categoria: CategoriaGasto;
+    };
+    categoriaMayorGasto?: CategoriaGasto;
+    totalGastos: number;
+    gastosPendientes: number;
+    gastosAprobados: number;
+    gastosPagados: number;
+  };
 }
 
 export interface ComparativaMensualDto {
+  periodo: string;
+  mes: number;
   anio: number;
-  meses: Array<{
-    mes: number;
-    nombreMes: string;
-    totalGastosFormateado: string;
-    totalIngresosFormateado: string;
-    utilidadNetaFormateada: string;
-    porcentajeCrecimiento: number | null;
-    consolidado: boolean;
-  }>;
+  totalGastosUSD: number;
+  totalGastosFormateado: string;
+  totalIngresosUSD: number;
+  totalIngresosFormateado: string;
+  utilidadNetaUSD: number;
+  utilidadNetaFormateado: string;
+  porcentajeCrecimiento?: number;
 }
 
 export interface GenerarNominaResultado {
   generados: number;
-  totalNominaUSD: string;
-  empleados: Array<{
-    empleadoId: string;
-    nombreCompleto: string;
-    salarioQuincenal: string;
-  }>;
-  advertencias?: string[];
+  errores: string[];
 }
 
 // ========== RESPONSES DE API ==========
@@ -249,7 +271,7 @@ export interface ResumenMensualResponse {
 
 export interface ComparativaResponse {
   success: boolean;
-  data: ComparativaMensualDto;
+  data: ComparativaMensualDto[];
 }
 
 export interface ConsolidarResponse {

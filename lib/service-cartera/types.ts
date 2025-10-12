@@ -8,6 +8,7 @@
 // ========== ENUMS ==========
 
 export enum EstadoFactura {
+  SEGUIMIENTO = 'SEGUIMIENTO', // Factura creada pero aún no enviada (esperando fecha de corte)
   PENDIENTE = 'PENDIENTE',
   PARCIAL = 'PARCIAL',
   PAGADO = 'PAGADO',

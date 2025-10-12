@@ -125,6 +125,52 @@ export function deleteCargo(id: string, token: string): Promise<void> {
   });
 }
 
+// ========== PLANTILLAS DE CONTRATOS ==========
+
+export function getAvailableContractTemplates(token: string): Promise<any[]> {
+  return requestJSON<any[]>(RRHH_ROUTES.contractTemplates, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getContractTemplatesByArea(areaCode: string, token: string): Promise<any[]> {
+  return requestJSON<any[]>(RRHH_ROUTES.contractTemplatesByArea(areaCode), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function getContractTemplatesByCargo(cargoCode: string, token: string): Promise<any[]> {
+  return requestJSON<any[]>(RRHH_ROUTES.contractTemplatesByCargo(cargoCode), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function assignContractTemplates(token: string): Promise<{ message: string }> {
+  return requestJSON<{ message: string }>(RRHH_ROUTES.assignContractTemplates, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function verifyTemplateAssignments(token: string): Promise<any> {
+  return requestJSON<any>(RRHH_ROUTES.verifyTemplateAssignments, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+export function clearTemplateAssignments(token: string): Promise<{ message: string }> {
+  return requestJSON<{ message: string }>(RRHH_ROUTES.clearTemplateAssignments, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
 // ========== SEEDER ==========
 export function seedDefaults(token: string): Promise<{ ok: true }> {
   return requestJSON<{ ok: true }>(RRHH_ROUTES.seedDefaults, {

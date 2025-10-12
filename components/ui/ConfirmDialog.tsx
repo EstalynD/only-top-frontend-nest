@@ -34,7 +34,7 @@ export default function ConfirmDialog({
   const Icon = icon ?? (severity === 'danger' ? <Trash2 size={20} style={{ color: '#ef4444' }} /> : severity === 'warning' ? <AlertTriangle size={20} style={{ color: '#f59e0b' }} /> : <Info size={20} style={{ color: 'var(--ot-blue-500)' }} />);
 
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} title={title} icon={Icon} maxWidth="max-w-md">
+    <Modal isOpen={isOpen} onClose={onCancel} title={title} icon={Icon} maxWidth="md">
       <div className="p-6 space-y-6">
         {description ? (
           <div className="text-sm" style={{ color: 'var(--text-primary)' }}>

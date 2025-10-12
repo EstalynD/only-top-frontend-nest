@@ -49,10 +49,11 @@ export default function FirmaContratoPublicaPage() {
         const data = await obtenerContratoPorToken(token);
         setContrato(data);
       } catch (error: any) {
+        const msg = error?.message || 'El enlace es inválido o ha expirado';
         addToast({
           type: 'error',
           title: 'Error al cargar contrato',
-          description: error?.message || 'El enlace es inválido o ha expirado',
+          description: msg,
         });
       } finally {
         setLoading(false);

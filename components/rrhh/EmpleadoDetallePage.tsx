@@ -18,7 +18,8 @@ import {
   XCircle,
   FileText,
   FolderOpen,
-  UserPlus
+  UserPlus,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -30,7 +31,12 @@ import { getProfile } from '@/lib/service-user/api';
 import type { UserProfile } from '@/lib/service-user/types';
 import ContratosTab from './ContratosTab';
 import DocumentosTab from './DocumentosTab';
+import DotacionTab from './DotacionTab';
+import CuentaTab from './CuentaTab';
 import CrearCuentaModal from './CrearCuentaModal';
+import ResetPasswordModal from './ResetPasswordModal';
+import EditarCuentaModal from './EditarCuentaModal';
+import EmpleadoModal from './EmpleadoModal';
 
 interface Props {
   empleadoId: string;
@@ -44,9 +50,12 @@ export default function EmpleadoDetallePage({ empleadoId, token, onBack }: Props
   const [empleado, setEmpleado] = React.useState<Empleado | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'info' | 'contratos' | 'documentos'>('info');
+  const [activeTab, setActiveTab] = React.useState<'info' | 'contratos' | 'documentos' | 'dotacion' | 'cuenta'>('info');
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
   const [showCrearCuentaModal, setShowCrearCuentaModal] = React.useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = React.useState(false);
+  const [showEditarCuentaModal, setShowEditarCuentaModal] = React.useState(false);
+  const [showEditarEmpleadoModal, setShowEditarEmpleadoModal] = React.useState(false);
 
   React.useEffect(() => {
     loadEmpleado();
@@ -96,6 +105,30 @@ export default function EmpleadoDetallePage({ empleadoId, token, onBack }: Props
       return;
     }
     setShowCrearCuentaModal(true);
+  };
+
+  const handleAccountCreated = () => {
+    // Recargar la información del empleado para actualizar el estado de la cuenta
+    loadEmpleado();
+  };
+
+  const handleOpenEditarEmpleado = () => {
+    setShowEditarEmpleadoModal(true);
+  };
+
+  const handleEmpleadoUpdated = () => {
+    // Cerrar el modal
+    setShowEditarEmpleadoModal(false);
+    
+    // Mostrar toast de éxito
+    toast({
+      type: 'success',
+      title: 'Empleado actualizado',
+      description: 'La información del empleado se ha actualizado correctamente.',
+    });
+    
+    // Recargar la información del empleado después de la edición
+    loadEmpleado();
   };
 
   const getEstadoIcon = (estado: string) => {
@@ -248,7 +281,7 @@ export default function EmpleadoDetallePage({ empleadoId, token, onBack }: Props
               </Button>
             )
           )}
-          <Button variant="primary" className="w-fit">
+          <Button variant="primary" className="w-fit" onClick={handleOpenEditarEmpleado}>
             <Edit size={16} />
             <span className="hidden sm:inline">Editar</span>
           </Button>
@@ -312,6 +345,43 @@ export default function EmpleadoDetallePage({ empleadoId, token, onBack }: Props
               Documentos
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab('dotacion')}
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'dotacion'
+                ? theme === 'dark'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-blue-500 text-blue-600'
+                : theme === 'dark'
+                  ? 'border-transparent text-gray-400 hover:text-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Package size={16} />
+              Dotación
+            </div>
+          </button>
+          {hasPermission('rrhh:empleados:manage_account') && (
+            <button
+              onClick={() => setActiveTab('cuenta')}
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === 'cuenta'
+                  ? theme === 'dark'
+                    ? 'border-blue-500 text-blue-400'
+                    : 'border-blue-500 text-blue-600'
+                  : theme === 'dark'
+                    ? 'border-transparent text-gray-400 hover:text-gray-300'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <UserCheck size={16} />
+                <span className="hidden sm:inline">Cuenta</span>
+                <span className="sm:hidden">Cuenta</span>
+              </div>
+            </button>
+          )}
         </nav>
       </div>
 
@@ -642,12 +712,64 @@ export default function EmpleadoDetallePage({ empleadoId, token, onBack }: Props
         <DocumentosTab empleadoId={empleadoId} token={token} />
       )}
 
+      {activeTab === 'dotacion' && (
+        <DotacionTab empleadoId={empleadoId} token={token} />
+      )}
+
+      {activeTab === 'cuenta' && hasPermission('rrhh:empleados:manage_account') && (
+        <CuentaTab 
+          empleadoId={empleadoId} 
+          token={token} 
+          empleadoNombre={empleado ? `${empleado.nombre} ${empleado.apellido}` : ''}
+          hasUserAccount={empleado?.hasUserAccount || false}
+          userAccount={empleado?.userAccount}
+          userProfile={userProfile}
+          onAccountCreated={handleAccountCreated}
+          onOpenCreateModal={() => setShowCrearCuentaModal(true)}
+          onOpenResetModal={() => setShowResetPasswordModal(true)}
+          onOpenEditModal={() => setShowEditarCuentaModal(true)}
+        />
+      )}
+
       {/* Modal Crear Cuenta */}
       <CrearCuentaModal
         isOpen={showCrearCuentaModal}
         onClose={() => setShowCrearCuentaModal(false)}
         empleadoId={empleadoId}
         empleadoNombre={empleado ? `${empleado.nombre} ${empleado.apellido}` : ''}
+        token={token}
+        onSuccess={handleAccountCreated}
+      />
+
+      {/* Modal Reset Password */}
+      <ResetPasswordModal
+        isOpen={showResetPasswordModal}
+        onClose={() => setShowResetPasswordModal(false)}
+        empleadoId={empleadoId}
+        empleadoNombre={empleado ? `${empleado.nombre} ${empleado.apellido}` : ''}
+        token={token}
+        onSuccess={handleAccountCreated}
+      />
+
+      {/* Modal Editar Cuenta */}
+      {empleado?.userAccount && (
+        <EditarCuentaModal
+          isOpen={showEditarCuentaModal}
+          onClose={() => setShowEditarCuentaModal(false)}
+          empleadoId={empleadoId}
+          empleadoNombre={empleado ? `${empleado.nombre} ${empleado.apellido}` : ''}
+          token={token}
+          currentAccount={empleado.userAccount}
+          onSuccess={handleAccountCreated}
+        />
+      )}
+
+      {/* Modal Editar Empleado */}
+      <EmpleadoModal
+        isOpen={showEditarEmpleadoModal}
+        onClose={() => setShowEditarEmpleadoModal(false)}
+        onSuccess={handleEmpleadoUpdated}
+        editingEmpleado={empleado}
         token={token}
       />
     </div>

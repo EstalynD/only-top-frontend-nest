@@ -161,18 +161,16 @@ export default function AdminUsersPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           </div>
           <div className="flex items-center gap-2 sm:justify-end">
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 rounded-lg text-white font-medium disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+              variant="primary"
             >
               {loading ? 'Buscando…' : 'Buscar'}
-            </button>
+            </Button>
             <Button
               type="button"
               onClick={openCreateModal}
-              className="px-4 py-2 rounded-lg text-white font-medium"
               variant="success"
             >
               Nuevo usuario
@@ -232,13 +230,13 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <button
+                        <Button
                           onClick={() => openAssignModal(u)}
-                          className="px-3 py-2 rounded-lg text-white text-sm"
-                          style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+                          variant="primary"
+                          size="sm"
                         >
                           Asignar roles
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -269,13 +267,14 @@ export default function AdminUsersPage() {
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{u.email || '-'}</p>
                       </div>
                     </div>
-                    <button
+                    <Button
                       onClick={() => openAssignModal(u)}
-                      className="px-3 py-2 rounded-lg text-white text-sm shrink-0"
-                      style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+                      variant="primary"
+                      size="sm"
+                      className="shrink-0"
                     >
                       Roles
-                    </button>
+                    </Button>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {(u.roles || []).slice(0, 4).map(r => (

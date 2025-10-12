@@ -5,6 +5,7 @@ import { listRoles, createRole, deleteRole, updateRole, listPermissions } from '
 import type { Role, PermissionDef } from '@/lib/service-rbac/types';
 import RoleModal, { RoleFormData, RoleModalMode } from '@/components/admin/RoleModal';
 import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 import Loader from '@/components/ui/Loader';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { 
@@ -140,14 +141,14 @@ export default function RolesPage() {
             </p>
           </div>
         </div>
-        <button
+        <Button
           onClick={openCreateModal}
-          className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium transition-all hover:shadow-lg"
-          style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+          variant="primary"
+          size="md"
         >
           <Plus size={18} />
-          <span>Nuevo Rol</span>
-        </button>
+          Nuevo Rol
+        </Button>
       </header>
 
       {/* Listado */}
@@ -226,22 +227,22 @@ export default function RolesPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
-                          <button
+                          <Button
                             onClick={() => openEditModal(role)}
-                            className="p-2 rounded-lg transition-colors hover:bg-opacity-10"
-                            style={{ color: 'var(--ot-blue-500)' }}
+                            variant="ghost"
+                            size="sm"
                             title="Editar rol"
                           >
                             <Edit size={16} />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => requestDelete(role.key)}
-                            className="p-2 rounded-lg transition-colors hover:bg-red-50"
-                            style={{ color: '#ef4444' }}
+                            variant="danger"
+                            size="sm"
                             title="Eliminar rol"
                           >
                             <Trash2 size={16} />
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -276,22 +277,22 @@ export default function RolesPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
+                      <Button
                         onClick={() => openEditModal(role)}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ color: 'var(--ot-blue-500)', border: '1px solid var(--border)' }}
+                        variant="ghost"
+                        size="sm"
                         title="Editar rol"
                       >
                         <Edit size={16} />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => requestDelete(role.key)}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ color: '#ef4444', border: '1px solid var(--border)' }}
+                        variant="danger"
+                        size="sm"
                         title="Eliminar rol"
                       >
                         <Trash2 size={16} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">

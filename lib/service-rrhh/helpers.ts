@@ -14,16 +14,6 @@ export function getRandomAreaColor(): string {
   return AREA_COLORS[Math.floor(Math.random() * AREA_COLORS.length)];
 }
 
-export function formatSalaryRange(min: number, max: number, currency = 'COP'): string {
-  const formatter = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-  
-  return `${formatter.format(min)} - ${formatter.format(max)}`;
-}
 
 export function getHierarchyLevelLabel(level: number): string {
   const labels: Record<number, string> = {
@@ -80,10 +70,7 @@ export function searchCargos(cargos: Cargo[], query: string): Cargo[] {
   return cargos.filter(cargo => 
     cargo.name.toLowerCase().includes(searchTerm) ||
     cargo.code.toLowerCase().includes(searchTerm) ||
-    cargo.description?.toLowerCase().includes(searchTerm) ||
-    cargo.requirements?.skills?.some(skill => 
-      skill.toLowerCase().includes(searchTerm)
-    )
+    cargo.description?.toLowerCase().includes(searchTerm)
   );
 }
 
@@ -217,4 +204,20 @@ export function validateEmpleadoData(data: unknown): { isValid: boolean; errors:
     isValid: errors.length === 0,
     errors
   };
+}
+
+// ========== Endowment (Dotación) ==========
+export function formatEndowmentAction(action: string): string {
+  switch (action) {
+    case 'ENTREGA': return 'Entrega';
+    case 'DEVOLUCION': return 'Devolución';
+    case 'MANTENIMIENTO': return 'Mantenimiento';
+    case 'REPARACION': return 'Reparación';
+    case 'REEMPLAZO': return 'Reemplazo';
+    default: return action;
+  }
+}
+
+export function sumEstimatedValue(items: Array<{ estimatedValue?: { monto: number } | null }>): number {
+  return items.reduce((acc, it) => acc + (it.estimatedValue?.monto ?? 0), 0);
 }

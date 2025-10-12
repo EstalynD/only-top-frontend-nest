@@ -114,7 +114,7 @@ export default function ShiftAssignmentsModal({
 			isOpen={isOpen}
 			onClose={onClose}
 			title={`${scheduleType === 'FIXED' ? 'Horario Fijo' : 'Turno Rotativo'} - Asignaciones`}
-			maxWidth="max-w-4xl"
+			maxWidth="4xl"
 		>
 			<div className="p-6 space-y-6">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">

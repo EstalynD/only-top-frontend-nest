@@ -183,7 +183,7 @@ export default function GoalModal({ goal, salesClosers, onSave, onClose }: GoalM
       onClose={onClose}
       title={isEditing ? 'Editar Meta' : 'Nueva Meta'}
       icon={headerIcon}
-      maxWidth="max-w-4xl"
+      maxWidth="4xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {/* Información Básica */}

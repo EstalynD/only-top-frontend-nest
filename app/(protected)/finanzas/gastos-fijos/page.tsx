@@ -19,6 +19,8 @@ import {
   Lock,
 } from 'lucide-react';
 import { GastosFijos } from '@/lib/service-finanzas';
+import { Button } from '@/components/ui/Button';
+import { Select, SelectField } from '@/components/ui/selectUI';
 import {
   type ResumenQuincenalDto,
   type ResumenMensualConsolidadoDto,
@@ -95,10 +97,18 @@ export default function GastosFijosPage() {
     try {
       if (vistaActual === 'quincenal') {
         const response = await GastosFijos.obtenerResumenQuincenal(token, mes, anio, quincena);
-        setResumenQuincenal(response.data);
+        // Algunas implementaciones de requestJSON retornan el objeto ya "desenvuelto" (data directa)
+        const resumen = (response as any)?.data ?? (response as any);
+        console.log('🔍 Respuesta completa del backend:', response);
+        console.log('📊 Resumen normalizado:', resumen);
+        console.log('📝 Gastos en resumen:', resumen?.gastos);
+        console.log('💰 Totales en resumen:', resumen?.totales);
+        setResumenQuincenal(resumen ?? null);
+        console.log('✅ Estado actualizado, resumenQuincenal ahora es:', resumen);
       } else {
         const response = await GastosFijos.obtenerResumenMensual(token, mes, anio);
-        setResumenMensual(response.data);
+        const resumen = (response as any)?.data ?? (response as any);
+        setResumenMensual(resumen ?? null);
       }
     } catch (err: any) {
       console.error('Error al cargar datos:', err);
@@ -156,6 +166,7 @@ export default function GastosFijosPage() {
     if (estadoFiltro !== 'TODOS' && gasto.estado !== estadoFiltro) return false;
     return true;
   }) || [];
+  
 
   // Estilos
   const pageStyle: CSSProperties = {
@@ -192,7 +203,7 @@ export default function GastosFijosPage() {
     color: 'var(--text-muted)',
   };
 
-  if (loading && !resumenQuincenal && !resumenMensual) {
+  if (loading) {
     return (
       <div style={pageStyle} className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -218,41 +229,43 @@ export default function GastosFijosPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={handleConsolidar}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+              variant="primary"
+              size="sm"
+              icon={<Lock size={18} />}
               style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white' }}
             >
-              <Lock size={18} />
-              <span>Consolidar</span>
-            </button>
+              Consolidar
+            </Button>
             
-            <button
+            <Button
               onClick={handleGenerarNomina}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
-              style={{ background: '#10b981', color: 'white' }}
+              variant="success"
+              size="sm"
+              icon={<Users size={18} />}
             >
-              <Users size={18} />
-              <span>Generar Nómina</span>
-            </button>
+              Generar Nómina
+            </Button>
             
-            <button
+            <Button
               onClick={handleEliminarNomina}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
-              style={{ background: '#ef4444', color: 'white' }}
+              variant="danger"
+              size="sm"
+              icon={<X size={18} />}
             >
-              <X size={18} />
-              <span>Eliminar Nómina</span>
-            </button>
+              Eliminar Nómina
+            </Button>
             
-            <button
+            <Button
               onClick={handleNuevoGasto}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+              variant="primary"
+              size="sm"
+              icon={<Plus size={18} />}
               style={buttonPrimaryStyle}
             >
-              <Plus size={18} />
-              <span>Nuevo Gasto</span>
-            </button>
+              Nuevo Gasto
+            </Button>
           </div>
         </div>
         
@@ -260,18 +273,17 @@ export default function GastosFijosPage() {
         <div className="flex items-center gap-4 mt-4">
           <div className="flex items-center gap-2">
             <Calendar size={18} style={mutedTextStyle} />
-            <select
-              value={mes}
-              onChange={(e) => setMes(Number(e.target.value))}
-              className="px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500"
-              style={inputStyle}
-            >
-              {OPCIONES_MESES.map(opcion => (
-                <option key={opcion.value} value={opcion.value}>
-                  {opcion.label}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={mes.toString()}
+              onChange={(value) => setMes(Number(value))}
+              options={OPCIONES_MESES.map(opcion => ({
+                value: opcion.value.toString(),
+                label: opcion.label
+              }))}
+              placeholder="Seleccionar mes"
+              size="sm"
+              className="w-40"
+            />
           </div>
           
           <input
@@ -286,30 +298,20 @@ export default function GastosFijosPage() {
           
           {/* Tabs Vista */}
           <div className="flex items-center gap-2 ml-auto">
-            <button
+            <Button
               onClick={() => setVistaActual('quincenal')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                vistaActual === 'quincenal' ? 'font-semibold' : ''
-              }`}
-              style={{
-                background: vistaActual === 'quincenal' ? 'var(--ot-blue-500)' : 'var(--surface-muted)',
-                color: vistaActual === 'quincenal' ? 'white' : 'var(--text-muted)',
-              }}
+              variant={vistaActual === 'quincenal' ? 'primary' : 'neutral'}
+              size="sm"
             >
               Vista Quincenal
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setVistaActual('mensual')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                vistaActual === 'mensual' ? 'font-semibold' : ''
-              }`}
-              style={{
-                background: vistaActual === 'mensual' ? 'var(--ot-blue-500)' : 'var(--surface-muted)',
-                color: vistaActual === 'mensual' ? 'white' : 'var(--text-muted)',
-              }}
+              variant={vistaActual === 'mensual' ? 'primary' : 'neutral'}
+              size="sm"
             >
               Resumen Mensual
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -322,19 +324,23 @@ export default function GastosFijosPage() {
       )}
 
       {vistaActual === 'quincenal' ? (
-        <VistaQuincenal
-          resumen={resumenQuincenal}
-          quincena={quincena}
-          onQuincenaChange={setQuincena}
-          gastosFiltrados={gastosFiltrados}
-          categoriaFiltro={categoriaFiltro}
-          estadoFiltro={estadoFiltro}
-          onCategoriaChange={setCategoriaFiltro}
-          onEstadoChange={setEstadoFiltro}
-          onEditarGasto={handleEditarGasto}
-          onCambiarEstado={handleCambiarEstado}
-          onEliminarGasto={handleEliminarGasto}
-        />
+        <>
+          {console.log('🎯 Antes de pasar a VistaQuincenal - resumenQuincenal:', resumenQuincenal)}
+          {console.log('🎯 Antes de pasar a VistaQuincenal - gastosFiltrados.length:', gastosFiltrados?.length)}
+          <VistaQuincenal
+            resumen={resumenQuincenal}
+            quincena={quincena}
+            onQuincenaChange={setQuincena}
+            gastosFiltrados={gastosFiltrados}
+            categoriaFiltro={categoriaFiltro}
+            estadoFiltro={estadoFiltro}
+            onCategoriaChange={setCategoriaFiltro}
+            onEstadoChange={setEstadoFiltro}
+            onEditarGasto={handleEditarGasto}
+            onCambiarEstado={handleCambiarEstado}
+            onEliminarGasto={handleEliminarGasto}
+          />
+        </>
       ) : (
         <VistaMensual resumen={resumenMensual} />
       )}
@@ -478,33 +484,37 @@ function VistaQuincenal({
     color: 'var(--text-primary)',
   };
 
-  if (!resumen) {
+  // Validación mejorada: verificar que resumen existe y tiene la estructura esperada
+  console.log('🔎 VistaQuincenal - resumen recibido:', resumen);
+  console.log('🔎 VistaQuincenal - tiene totales?:', resumen?.totales);
+  console.log('🔎 VistaQuincenal - tiene gastos?:', resumen?.gastos);
+  console.log('🔎 VistaQuincenal - cantidad de gastos:', resumen?.gastos?.length);
+
+  if (!resumen || !resumen.totales) {
+    console.log('❌ VistaQuincenal - No hay datos: resumen =', resumen);
     return (
       <div className="text-center py-12">
         <FileText size={48} className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
-        <p style={{ color: 'var(--text-muted)' }}>No hay datos disponibles</p>
+        <p style={{ color: 'var(--text-muted)' }}>No hay datos disponibles para esta quincena</p>
       </div>
     );
   }
+
+  console.log('✅ VistaQuincenal - Renderizando con datos válidos');
 
   return (
     <div className="space-y-6">
       {/* Selector de Quincena */}
       <div className="flex items-center justify-center gap-4">
         {OPCIONES_QUINCENA.map(opcion => (
-          <button
+          <Button
             key={opcion.value}
             onClick={() => onQuincenaChange(opcion.value)}
-            className="px-6 py-3 rounded-lg transition-all font-medium"
-            style={{
-              background: quincena === opcion.value ? 'var(--ot-blue-500)' : 'var(--surface)',
-              color: quincena === opcion.value ? 'white' : 'var(--text-primary)',
-              border: '1px solid var(--border)',
-              boxShadow: quincena === opcion.value ? 'var(--shadow)' : 'none',
-            }}
+            variant={quincena === opcion.value ? 'primary' : 'neutral'}
+            size="md"
           >
             {opcion.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -548,31 +558,34 @@ function VistaQuincenal({
         <div className="flex items-center gap-4">
           <Filter size={18} style={{ color: 'var(--text-muted)' }} />
           
-          <select
+          <Select
             value={categoriaFiltro}
-            onChange={(e) => onCategoriaChange(e.target.value as CategoriaGasto | 'TODAS')}
-            className="px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500"
-            style={inputStyle}
-          >
-            <option value="TODAS">Todas las categorías</option>
-            {OPCIONES_CATEGORIA.map(cat => (
-              <option key={cat.value} value={cat.value}>
-                {cat.icon} {cat.label}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => onCategoriaChange(value as CategoriaGasto | 'TODAS')}
+            options={[
+              { value: 'TODAS', label: 'Todas las categorías' },
+              ...OPCIONES_CATEGORIA.map(cat => ({
+                value: cat.value,
+                label: `${cat.icon} ${cat.label}`
+              }))
+            ]}
+            placeholder="Seleccionar categoría"
+            size="sm"
+            className="w-48"
+          />
 
-          <select
+          <Select
             value={estadoFiltro}
-            onChange={(e) => onEstadoChange(e.target.value as EstadoGasto | 'TODOS')}
-            className="px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500"
-            style={inputStyle}
-          >
-            <option value="TODOS">Todos los estados</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="APROBADO">Aprobado</option>
-            <option value="PAGADO">Pagado</option>
-          </select>
+            onChange={(value) => onEstadoChange(value as EstadoGasto | 'TODOS')}
+            options={[
+              { value: 'TODOS', label: 'Todos los estados' },
+              { value: 'PENDIENTE', label: 'Pendiente' },
+              { value: 'APROBADO', label: 'Aprobado' },
+              { value: 'PAGADO', label: 'Pagado' }
+            ]}
+            placeholder="Seleccionar estado"
+            size="sm"
+            className="w-40"
+          />
 
           <span style={{ color: 'var(--text-muted)' }} className="ml-auto text-sm">
             {gastosFiltrados.length} {gastosFiltrados.length === 1 ? 'gasto' : 'gastos'}
@@ -631,47 +644,52 @@ function VistaQuincenal({
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       {/* Botón Cambiar Estado (siempre visible) */}
-                      <button
+                      <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           onCambiarEstado(gasto);
                         }}
-                        className="px-3 py-1 text-xs rounded-lg transition-colors flex items-center gap-1"
+                        variant="neutral"
+                        size="sm"
+                        icon={<Check size={14} />}
                         style={{
                           background: '#3b82f620',
                           color: '#3b82f6',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem'
                         }}
-                        title="Cambiar Estado"
+                        ariaLabel="Cambiar Estado"
                       >
-                        <Check size={14} />
                         Estado
-                      </button>
+                      </Button>
                       
                       {/* Botón Editar (solo si NO es NOMINA) */}
                       {gasto.categoria !== CategoriaGasto.NOMINA && (
-                        <button
+                        <Button
                           onClick={(e) => {
                             e.stopPropagation();
                             onEditarGasto(gasto);
                           }}
-                          className="text-purple-500 hover:text-purple-700 transition-colors p-1 rounded"
-                          title="Editar Gasto"
-                        >
-                          <ChevronRight size={18} />
-                        </button>
+                          variant="ghost"
+                          size="sm"
+                          icon={<ChevronRight size={18} />}
+                          style={{ color: '#8b5cf6' }}
+                          ariaLabel="Editar Gasto"
+                        />
                       )}
                       
                       {/* Botón Eliminar (siempre visible) */}
-                      <button
+                      <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           onEliminarGasto(gasto.id);
                         }}
-                        className="text-red-500 hover:text-red-700 transition-colors p-1 rounded"
-                        title="Eliminar Gasto"
-                      >
-                        <X size={18} />
-                      </button>
+                        variant="ghost"
+                        size="sm"
+                        icon={<X size={18} />}
+                        style={{ color: '#ef4444' }}
+                        ariaLabel="Eliminar Gasto"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -709,7 +727,7 @@ function VistaMensual({ resumen }: { resumen: ResumenMensualConsolidadoDto | nul
     );
   }
 
-  const utilidadColors = getIndicadorColors(resumen.utilidadNeta?.indicadorColor || 'gris');
+  const utilidadColors = getIndicadorColors(resumen.utilidadNeta?.color || 'gris');
 
   return (
     <div className="space-y-6">
@@ -725,10 +743,10 @@ function VistaMensual({ resumen }: { resumen: ResumenMensualConsolidadoDto | nul
             }}
           >
             <p className="text-4xl font-bold" style={{ color: utilidadColors?.text || '#6b7280' }}>
-              {resumen.utilidadNeta?.montoFormateado || '$ 0.00'}
+              {resumen.utilidadNeta?.totalFormateado || '$ 0.00'}
             </p>
             <p className="text-sm mt-2" style={{ color: utilidadColors?.text || '#6b7280' }}>
-              {resumen.utilidadNeta?.esPositivo ? '✓ Positiva' : '✗ Negativa'}
+              {resumen.utilidadNeta?.esPositiva ? '✓ Positiva' : '✗ Negativa'}
             </p>
           </div>
         </div>
@@ -739,7 +757,7 @@ function VistaMensual({ resumen }: { resumen: ResumenMensualConsolidadoDto | nul
             <div className="flex items-center justify-center gap-4">
               <div className="text-center">
                 <p style={{ color: 'var(--text-muted)' }} className="text-xs mb-1">{resumen.comparativa.mesAnterior || 'Mes anterior'}</p>
-                <p className="text-lg font-semibold">{resumen.comparativa.utilidadAnteriorFormateada || '$ 0.00'}</p>
+                <p className="text-lg font-semibold">{resumen.comparativa.utilidadMesAnteriorFormateado || '$ 0.00'}</p>
               </div>
               
               <div className="flex items-center gap-2">
@@ -753,8 +771,8 @@ function VistaMensual({ resumen }: { resumen: ResumenMensualConsolidadoDto | nul
                 <span
                   className="text-2xl font-bold"
                   style={{
-                    color: resumen.comparativa.indicadorColor === 'verde' ? '#10b981' : 
-                           resumen.comparativa.indicadorColor === 'rojo' ? '#ef4444' : '#6b7280'
+                    color: resumen.comparativa.direccion === 'crecimiento' ? '#10b981' : 
+                           resumen.comparativa.direccion === 'decrecimiento' ? '#ef4444' : '#6b7280'
                   }}
                 >
                   {resumen.comparativa.porcentajeCrecimiento > 0 ? '+' : ''}
@@ -811,9 +829,9 @@ function VistaMensual({ resumen }: { resumen: ResumenMensualConsolidadoDto | nul
                   <span>{getCategoriaLabel(cat.categoria)}</span>
                 </div>
                 <div className="text-right flex-1">
-                  <p className="font-semibold">{cat.totalCategoriaFormateado || '$ 0.00'}</p>
+                  <p className="font-semibold">{cat.totalFormateado || '$ 0.00'}</p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {cat.porcentajeDelTotal?.toFixed(1) || '0.0'}% del total
+                    {cat.porcentaje?.toFixed(1) || '0.0'}% del total
                   </p>
                 </div>
               </div>

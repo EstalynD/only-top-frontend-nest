@@ -111,7 +111,7 @@ export default function ModalAprobarHorasExtras({
       ) : (
         <XCircle size={22} style={{ color: iconColor }} />
       )}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <form onSubmit={handleSubmit}>
         <div className="p-4 sm:p-6 space-y-6">

@@ -17,6 +17,7 @@ import {
   CATEGORIAS_BASE,
 } from '@/lib/service-finanzas';
 import { ChevronLeft, ChevronRight, Plus, Lock, Download, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import RegistrarGastoModal from './RegistrarGastoModal';
 import CrearCategoriaModal from './CrearCategoriaModal';
 import ConsolidarMesModal from './ConsolidarMesModal';
@@ -196,13 +197,13 @@ export function CostosFijosView() {
 
         {/* Selector de mes/año */}
         <div className="flex items-center gap-4">
-          <button
+          <Button
             onClick={() => cambiarMes(-1)}
-            className="p-2 rounded-lg hover:bg-[var(--surface)] transition-colors"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            <ChevronLeft size={20} />
-          </button>
+            variant="ghost"
+            size="sm"
+            icon={<ChevronLeft size={20} />}
+            ariaLabel="Mes anterior"
+          />
 
           <div className="text-center min-w-[180px]">
             <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
@@ -220,13 +221,13 @@ export function CostosFijosView() {
             </div>
           </div>
 
-          <button
+          <Button
             onClick={() => cambiarMes(1)}
-            className="p-2 rounded-lg hover:bg-[var(--surface)] transition-colors"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            <ChevronRight size={20} />
-          </button>
+            variant="ghost"
+            size="sm"
+            icon={<ChevronRight size={20} />}
+            ariaLabel="Mes siguiente"
+          />
         </div>
       </div>
 
@@ -297,57 +298,52 @@ export function CostosFijosView() {
 
       {/* Acciones principales */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
           disabled={costos?.consolidado}
           onClick={handleAbrirModalGasto}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: costos?.consolidado ? 'var(--surface-muted)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          variant="primary"
+          size="sm"
+          icon={<Plus size={18} />}
+          style={costos?.consolidado ? undefined : {
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: '#ffffff',
           }}
         >
-          <Plus size={18} />
           Registrar Gasto
-        </button>
+        </Button>
 
-        <button
+        <Button
           disabled={costos?.consolidado}
           onClick={handleAbrirModalCategoria}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: 'var(--surface)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border)',
-          }}
+          variant="neutral"
+          size="sm"
+          icon={<BarChart3 size={18} />}
         >
-          <BarChart3 size={18} />
           Nueva Categoría
-        </button>
+        </Button>
 
-        <button
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors"
-          style={{
-            background: 'var(--surface)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border)',
-          }}
+        <Button
+          variant="neutral"
+          size="sm"
+          icon={<Download size={18} />}
         >
-          <Download size={18} />
           Exportar CSV
-        </button>
+        </Button>
 
         {!costos?.consolidado && (
-          <button
+          <Button
             onClick={handleAbrirModalConsolidar}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ml-auto"
+            variant="primary"
+            size="sm"
+            icon={<Lock size={18} />}
+            className="ml-auto"
             style={{
               background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
               color: '#ffffff',
             }}
           >
-            <Lock size={18} />
             Consolidar Mes
-          </button>
+          </Button>
         )}
       </div>
 

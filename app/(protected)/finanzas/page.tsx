@@ -9,6 +9,8 @@
 import React from 'react';
 import { DollarSign, Calculator, RefreshCw, Download, Calendar } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/Button';
+import { Select, SelectField } from '@/components/ui/selectUI';
 import { 
   obtenerModelosConGanancias,
   obtenerEstadisticas,
@@ -125,65 +127,52 @@ export default function FinanzasPage() {
             {/* Selector de Periodo */}
             <div className="flex items-center gap-2">
               <Calendar size={18} style={{ color: 'var(--text-muted)' }} />
-              <select
-                value={mes}
-                onChange={(e) => setMes(parseInt(e.target.value))}
-                className="px-3 py-2 rounded-lg border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[var(--ot-blue-500)]"
-                style={{
-                  background: 'var(--surface)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {getNombreMes(m)}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                value={anio}
-                onChange={(e) => setAnio(parseInt(e.target.value))}
-                min={2020}
-                max={2030}
-                className="w-24 px-3 py-2 rounded-lg border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[var(--ot-blue-500)]"
-                style={{
-                  background: 'var(--surface)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
+              <Select
+                value={mes.toString()}
+                onChange={(value) => setMes(parseInt(value))}
+                options={Array.from({ length: 12 }, (_, i) => ({
+                  value: (i + 1).toString(),
+                  label: getNombreMes(i + 1)
+                }))}
+                placeholder="Seleccionar mes"
+                size="sm"
+                className="w-32"
+              />
+              <Select
+                value={anio.toString()}
+                onChange={(value) => setAnio(parseInt(value))}
+                options={Array.from({ length: 11 }, (_, i) => {
+                  const year = 2020 + i;
+                  return {
+                    value: year.toString(),
+                    label: year.toString()
+                  };
+                })}
+                placeholder="Año"
+                size="sm"
+                className="w-28"
               />
             </div>
 
-            <button
+            <Button
               onClick={cargarDatos}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-90 disabled:opacity-50"
-              style={{
-                background: 'var(--surface)',
-                borderColor: 'var(--border)',
-                border: '1px solid',
-                color: 'var(--text-primary)',
-              }}
+              variant="neutral"
+              size="sm"
+              icon={<RefreshCw size={16} className={loading ? 'animate-spin' : ''} />}
+              loading={loading}
             >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               Actualizar
-            </button>
+            </Button>
 
-            <button
+            <Button
               disabled
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all opacity-50 cursor-not-allowed"
-              style={{
-                background: 'var(--surface)',
-                borderColor: 'var(--border)',
-                border: '1px solid',
-                color: 'var(--text-primary)',
-              }}
+              variant="neutral"
+              size="sm"
+              icon={<Download size={16} />}
             >
-              <Download size={16} />
               Exportar
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -200,17 +189,14 @@ export default function FinanzasPage() {
             <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
               Modelos del Periodo
             </h2>
-            <button
+            <Button
               onClick={() => setCalcularMasivoModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-90"
-              style={{
-                background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))',
-                color: '#ffffff',
-              }}
+              variant="primary"
+              size="sm"
+              icon={<Calculator size={16} />}
             >
-              <Calculator size={16} />
               Calcular Todas
-            </button>
+            </Button>
           </div>
 
           <ModelosGananciasTable

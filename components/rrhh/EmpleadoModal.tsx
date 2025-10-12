@@ -2,9 +2,10 @@
 import React from 'react';
 import { User, Plus, Trash2, DollarSign, MapPin, Phone, Mail, Calendar, Building2, UserCheck, Upload, X, Camera } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import { useModal } from '@/lib/hooks/useModal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
-import { Select, SelectField, type SelectOption } from '@/components/ui/Select';
+import { Select, SelectField, type SelectOption } from '@/components/ui/selectUI';
 import { useTheme } from '@/lib/theme';
 import { createEmpleado, updateEmpleado, getAllEmpleados, uploadEmpleadoPhoto } from '@/lib/service-rrhh/empleados-api';
 import { getAllAreas, getAllCargos } from '@/lib/service-rrhh/api';
@@ -46,6 +47,33 @@ const isValidObjectId = (id: string): boolean => {
 export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmpleado, token }: Props) {
   const { toast } = useToast();
   const { theme } = useTheme();
+  
+  // Usar el hook de modal mejorado
+  const modal = useModal({
+    preventBodyScroll: true,
+    closeOnEscape: true,
+    closeOnBackdropClick: false // No cerrar al hacer click en backdrop para formularios
+  });
+
+  // Helper styles for consistent styling
+  const inputStyle = {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    fontSize: '0.875rem',
+    borderRadius: '0.5rem',
+    border: '1px solid var(--border)',
+    background: 'var(--surface)',
+    color: 'var(--text-primary)',
+    transition: 'all 0.2s'
+  };
+  
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    marginBottom: '0.25rem',
+    color: 'var(--text-primary)'
+  };
   const [loading, setLoading] = React.useState(false);
   const [areas, setAreas] = React.useState<Area[]>([]);
   const [cargos, setCargos] = React.useState<Cargo[]>([]);
@@ -53,6 +81,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
   const [loadingData, setLoadingData] = React.useState(false);
   const [uploadingPhoto, setUploadingPhoto] = React.useState(false);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [formData, setFormData] = React.useState({
     // Información personal
     nombre: '',
@@ -95,6 +124,15 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
     
     fotoPerfil: ''
   });
+
+  // Sincronizar el estado del modal con las props
+  React.useEffect(() => {
+    if (isOpen && !modal.isOpen) {
+      modal.openModal();
+    } else if (!isOpen && modal.isOpen) {
+      modal.closeModal();
+    }
+  }, [isOpen, modal.isOpen]);
 
   // Load data when modal opens
   React.useEffect(() => {
@@ -198,8 +236,17 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
     }
   }, [isOpen, editingEmpleado]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Cleanup preview URL on unmount
+  React.useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
     // Validaciones básicas
     if (!formData.nombre.trim() || !formData.apellido.trim() || !formData.correoElectronico.trim()) {
@@ -234,7 +281,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
     try {
       setLoading(true);
       
-      const data = {
+      let finalFormData = {
         ...formData,
         correoPersonal: formData.correoPersonal || null,
         correoCorporativo: formData.correoCorporativo || null,
@@ -260,38 +307,59 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
         }
       };
 
+      // Upload photo if a new one was selected
+      if (selectedFile) {
+        setUploadingPhoto(true);
+        try {
+          const photoResult = await uploadPhotoToCloudinary(selectedFile);
+          finalFormData = {
+            ...finalFormData,
+            fotoPerfil: photoResult.url,
+          };
+        } catch (photoError: any) {
+          toast({
+            type: 'error',
+            title: 'Error al subir foto',
+            description: photoError?.message || 'No se pudo subir la foto',
+          });
+          return;
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
+
       // Validación adicional de IDs
-      if (!data.areaId || data.areaId === '') {
+      if (!finalFormData.areaId || finalFormData.areaId === '') {
         throw new Error('Debe seleccionar un área');
       }
       
-      if (!data.cargoId || data.cargoId === '') {
+      if (!finalFormData.cargoId || finalFormData.cargoId === '') {
         throw new Error('Debe seleccionar un cargo');
       }
 
       // Verificar que los IDs tengan el formato correcto (24 caracteres hexadecimales)
-      if (!isValidObjectId(data.areaId)) {
+      if (!isValidObjectId(finalFormData.areaId)) {
         throw new Error('El ID del área no es válido');
       }
       
-      if (!isValidObjectId(data.cargoId)) {
+      if (!isValidObjectId(finalFormData.cargoId)) {
         throw new Error('El ID del cargo no es válido');
       }
 
       // Debug: Log de los datos que se van a enviar
       console.log('Datos a enviar:', {
-        areaId: data.areaId,
-        cargoId: data.cargoId,
-        areaIdLength: data.areaId.length,
-        cargoIdLength: data.cargoId.length,
-        areaIdValid: isValidObjectId(data.areaId),
-        cargoIdValid: isValidObjectId(data.cargoId)
+        areaId: finalFormData.areaId,
+        cargoId: finalFormData.cargoId,
+        areaIdLength: finalFormData.areaId.length,
+        cargoIdLength: finalFormData.cargoId.length,
+        areaIdValid: isValidObjectId(finalFormData.areaId),
+        cargoIdValid: isValidObjectId(finalFormData.cargoId)
       });
 
       if (editingEmpleado) {
-        await updateEmpleado(editingEmpleado._id, data as UpdateEmpleadoDto, token);
+        await updateEmpleado(editingEmpleado._id, finalFormData as UpdateEmpleadoDto, token);
       } else {
-        await createEmpleado(data as CreateEmpleadoDto, token);
+        await createEmpleado(finalFormData as CreateEmpleadoDto, token);
       }
       
       onSuccess();
@@ -334,6 +402,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
 
   const handleClose = () => {
     if (!loading) {
+      modal.closeModal();
       onClose();
     }
   };
@@ -391,131 +460,122 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
     });
   };
 
-  // Manejar subida de foto
-  const handlePhotoUpload = async (file: File) => {
-    if (!file) return;
+  // Función para subir foto a Cloudinary
+  const uploadPhotoToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', 'only-top/employee-photos');
+    formData.append('public_id', `employee_${Date.now()}`);
 
-    // Validar tipo de archivo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        type: 'error',
-        title: 'Tipo de archivo no válido',
-        description: 'Solo se permiten archivos de imagen (JPG, PNG, GIF, WebP).',
-      });
-      return;
-    }
-
-    // Validar tamaño (5MB máximo)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      toast({
-        type: 'error',
-        title: 'Archivo muy grande',
-        description: 'El archivo no puede ser mayor a 5MB.',
-      });
-      return;
-    }
-
-    try {
-      setUploadingPhoto(true);
-      
-      // Crear preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // Subir a Cloudinary
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'only-top/employee-photos');
-      formData.append('public_id', `employee_${Date.now()}`);
-
-      const result = await uploadEmpleadoPhoto(formData, token);
-      
-      if (result.success && result.data?.url) {
-        setFormData(prev => ({ ...prev, fotoPerfil: result.data!.url }));
-        toast({
-          type: 'success',
-          title: 'Foto subida exitosamente',
-          description: 'La foto de perfil se ha subido correctamente.',
-        });
-      } else {
-        throw new Error(result.message || 'Error al subir la foto');
-      }
-    } catch (error: any) {
-      console.error('Error uploading photo:', error);
-      toast({
-        type: 'error',
-        title: 'Error al subir foto',
-        description: error.message || 'No se pudo subir la foto. Inténtalo de nuevo.',
-      });
-      setPhotoPreview(null);
-    } finally {
-      setUploadingPhoto(false);
+    const result = await uploadEmpleadoPhoto(formData, token);
+    
+    if (result.success && result.data?.url) {
+      return result.data;
+    } else {
+      throw new Error(result.message || 'Error al subir la foto');
     }
   };
 
-  // Manejar cambio de archivo
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handlePhotoUpload(file);
+  // Manejar selección de foto
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+
+    const file = e.target.files[0];
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        type: 'error',
+        title: 'Archivo muy grande',
+        description: 'La foto no debe superar los 5MB',
+      });
+      return;
     }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        type: 'error',
+        title: 'Tipo de archivo inválido',
+        description: 'Solo se permiten archivos de imagen',
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Create preview URL
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
   };
 
   // Eliminar foto
   const handleRemovePhoto = () => {
     setFormData(prev => ({ ...prev, fotoPerfil: '' }));
     setPhotoPreview(null);
+    setSelectedFile(null);
   };
+
+  // Footer del modal
+  const modalFooter = (
+    <div className="flex items-center justify-end gap-3">
+      <Button
+        variant="neutral"
+        onClick={handleClose}
+        disabled={loading || loadingData}
+        size="md"
+      >
+        Cancelar
+      </Button>
+      <Button
+        variant="primary"
+        onClick={handleSubmit}
+        disabled={loading || loadingData || !formData.nombre.trim() || !formData.apellido.trim() || !formData.correoElectronico.trim()}
+        size="md"
+      >
+        <User size={16} />
+        {loading ? 'Guardando...' : editingEmpleado ? 'Actualizar' : 'Crear Empleado'}
+      </Button>
+    </div>
+  );
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen={modal.isOpen}
       onClose={handleClose}
       title={editingEmpleado ? 'Editar Empleado' : 'Nuevo Empleado'}
       icon={<User size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-6xl"
+      maxWidth="7xl"
+      description="Complete la información del empleado. Los campos marcados con * son obligatorios."
+      footer={modalFooter}
+      closeOnBackdropClick={false}
+      closeOnEscape={true}
+      preventBodyScroll={true}
+      isLoading={loadingData}
+      loadingComponent={
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--ot-blue-500)' }}></div>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Cargando datos del empleado...
+          </p>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="p-3 sm:p-4 space-y-4 sm:space-y-6">
-        {/* Loading indicator */}
-        {loadingData && (
-          <div className="flex items-center justify-center py-8">
-            <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${
-              theme === 'dark' ? 'border-blue-400' : 'border-blue-500'
-            }`}></div>
-            <span className={`ml-2 text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-            }`}>
-              Cargando datos...
-            </span>
-          </div>
-        )}
-
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Layout principal con dos columnas */}
-        {!loadingData && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
           
           {/* Columna Izquierda */}
           <div className="space-y-4">
             {/* Información Personal */}
-            <div className={`rounded-lg p-3 sm:p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <h3 className={`text-sm sm:text-base font-semibold mb-3 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+            <div className="rounded-lg p-3 sm:p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-sm sm:text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <User size={16} />
                 Información Personal
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className={`block text-xs sm:text-sm font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Nombre *
                   </label>
                   <input
@@ -523,20 +583,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.nombre}
                     onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                     placeholder="Nombre"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Apellido *
                   </label>
                   <input
@@ -544,20 +598,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.apellido}
                     onChange={(e) => setFormData(prev => ({ ...prev, apellido: e.target.value }))}
                     placeholder="Apellido"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Correo Electrónico *
                   </label>
                   <input
@@ -565,20 +613,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.correoElectronico}
                     onChange={(e) => setFormData(prev => ({ ...prev, correoElectronico: e.target.value }))}
                     placeholder="correo@ejemplo.com"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Correo Personal
                   </label>
                   <input
@@ -586,19 +628,13 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.correoPersonal}
                     onChange={(e) => setFormData(prev => ({ ...prev, correoPersonal: e.target.value }))}
                     placeholder="correo.personal@ejemplo.com"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Correo Corporativo
                   </label>
                   <input
@@ -606,19 +642,13 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.correoCorporativo}
                     onChange={(e) => setFormData(prev => ({ ...prev, correoCorporativo: e.target.value }))}
                     placeholder="correo@empresa.com"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Teléfono *
                   </label>
                   <input
@@ -626,20 +656,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.telefono}
                     onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
                     placeholder="+57 300 123 4567"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Número de Identificación *
                   </label>
                   <input
@@ -647,31 +671,21 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.numeroIdentificacion}
                     onChange={(e) => setFormData(prev => ({ ...prev, numeroIdentificacion: e.target.value }))}
                     placeholder="12345678"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Fecha de Nacimiento *
                   </label>
                   <input
                     type="date"
                     value={formData.fechaNacimiento}
                     onChange={(e) => setFormData(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
@@ -680,12 +694,8 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
             </div>
 
             {/* Información Laboral */}
-            <div className={`rounded-lg p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <Building2 size={16} />
                 Información Laboral
               </h3>
@@ -744,20 +754,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className={`block text-xs font-medium mb-1 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
+                    <label style={labelStyle}>
                       Fecha de Inicio *
                     </label>
                     <input
                       type="date"
                       value={formData.fechaInicio}
                       onChange={(e) => setFormData(prev => ({ ...prev, fechaInicio: e.target.value }))}
-                      className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        theme === 'dark'
-                          ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                          : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                      }`}
+                      style={inputStyle}
                       disabled={loading}
                       required
                     />
@@ -775,9 +779,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Salario *
                   </label>
                   <div className="flex gap-2">
@@ -790,11 +792,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                       }))}
                       placeholder="0"
                       min="0"
-                      className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        theme === 'dark'
-                          ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                          : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                      }`}
+                      style={{ ...inputStyle, flex: 1 }}
                       disabled={loading}
                       required
                     />
@@ -818,20 +816,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
           {/* Columna Derecha */}
           <div className="space-y-4">
             {/* Dirección */}
-            <div className={`rounded-lg p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <MapPin size={16} />
                 Dirección
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Dirección *
                   </label>
                   <input
@@ -839,20 +831,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.direccion}
                     onChange={(e) => setFormData(prev => ({ ...prev, direccion: e.target.value }))}
                     placeholder="Calle 123 #45-67"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Ciudad *
                   </label>
                   <input
@@ -860,11 +846,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                     value={formData.ciudad}
                     onChange={(e) => setFormData(prev => ({ ...prev, ciudad: e.target.value }))}
                     placeholder="Bogotá"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
@@ -873,20 +855,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
             </div>
 
             {/* Contacto de Emergencia */}
-            <div className={`rounded-lg p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <Phone size={16} />
                 Contacto de Emergencia
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Nombre *
                   </label>
                   <input
@@ -897,11 +873,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                       contactoEmergencia: { ...prev.contactoEmergencia, nombre: e.target.value }
                     }))}
                     placeholder="Nombre del contacto"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
@@ -909,9 +881,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className={`block text-xs font-medium mb-1 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
+                    <label style={labelStyle}>
                       Teléfono *
                     </label>
                     <input
@@ -922,20 +892,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                         contactoEmergencia: { ...prev.contactoEmergencia, telefono: e.target.value }
                       }))}
                       placeholder="+57 300 123 4567"
-                      className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        theme === 'dark'
-                          ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                          : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                      }`}
+                      style={inputStyle}
                       disabled={loading}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-medium mb-1 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
+                    <label style={labelStyle}>
                       Relación
                     </label>
                     <input
@@ -946,11 +910,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                         contactoEmergencia: { ...prev.contactoEmergencia, relacion: e.target.value }
                       }))}
                       placeholder="Familiar, amigo, etc."
-                      className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        theme === 'dark'
-                          ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                          : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                      }`}
+                      style={inputStyle}
                       disabled={loading}
                     />
                   </div>
@@ -959,20 +919,14 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
             </div>
 
             {/* Información Bancaria */}
-            <div className={`rounded-lg p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <DollarSign size={16} />
                 Información Bancaria
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Banco *
                   </label>
                   <input
@@ -983,11 +937,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                       informacionBancaria: { ...prev.informacionBancaria, nombreBanco: e.target.value }
                     }))}
                     placeholder="Banco de Bogotá"
-                    className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                        : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                    }`}
+                    style={inputStyle}
                     disabled={loading}
                     required
                   />
@@ -995,9 +945,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className={`block text-xs font-medium mb-1 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
+                    <label style={labelStyle}>
                       Número de Cuenta *
                     </label>
                     <input
@@ -1008,11 +956,7 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                         informacionBancaria: { ...prev.informacionBancaria, numeroCuenta: e.target.value }
                       }))}
                       placeholder="1234567890"
-                      className={`w-full px-3 py-2 text-sm rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        theme === 'dark'
-                          ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400'
-                          : 'border-gray-200 bg-white text-gray-900 placeholder-gray-500'
-                      }`}
+                      style={inputStyle}
                       disabled={loading}
                       required
                     />
@@ -1035,12 +979,8 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
             </div>
 
             {/* Foto de Perfil */}
-            <div className={`rounded-lg p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <Camera size={16} />
                 Foto de Perfil
               </h3>
@@ -1062,26 +1002,22 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className={`text-sm font-medium ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        Foto seleccionada
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {selectedFile ? 'Foto seleccionada' : 'Foto actual'}
                       </p>
-                      <p className={`text-xs ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                      }`}>
-                        {formData.fotoPerfil ? 'Subida exitosamente' : 'Preparando subida...'}
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {selectedFile ? '(Se subirá al guardar)' : 'Foto guardada'}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleRemovePhoto}
                       disabled={uploadingPhoto}
-                      className={`p-1 rounded-full transition-colors ${
-                        theme === 'dark' 
-                          ? 'hover:bg-red-900/20 text-red-400' 
-                          : 'hover:bg-red-100 text-red-600'
-                      }`}
+                      className="p-1 rounded-full transition-colors"
+                      style={{ 
+                        color: 'var(--danger-500)',
+                        background: 'transparent'
+                      }}
                     >
                       <X size={16} />
                     </button>
@@ -1090,68 +1026,40 @@ export default function EmpleadoModal({ isOpen, onClose, onSuccess, editingEmple
 
                 {/* Input de archivo */}
                 <div>
-                  <label className={`block text-xs font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <label style={labelStyle}>
                     Seleccionar Foto
                   </label>
                   <div className="relative">
                     <input
                       type="file"
                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                      onChange={handleFileChange}
+                      onChange={handlePhotoSelect}
                       disabled={loading || uploadingPhoto}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                     />
-                    <div className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors ${
-                      theme === 'dark'
-                        ? 'border-gray-600 bg-gray-800 text-white hover:bg-gray-700'
-                        : 'border-gray-200 bg-white text-gray-900 hover:bg-gray-50'
-                    }`}>
+                    <div 
+                      className="flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors"
+                      style={{ 
+                        borderColor: 'var(--border)',
+                        background: 'var(--surface)',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
                       <Upload size={16} />
                       <span className="text-sm">
-                        {uploadingPhoto ? 'Subiendo...' : 'Seleccionar archivo'}
+                        {uploadingPhoto ? 'Subiendo...' : selectedFile ? 'Cambiar Foto' : 'Seleccionar archivo'}
                       </span>
                     </div>
                   </div>
-                  <p className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    Formatos: JPG, PNG, GIF, WebP. Máximo 5MB.
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Formatos: JPG, PNG, GIF, WebP. Máximo 5MB. {selectedFile && '(Se subirá al guardar)'}
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        )}
 
-        {/* Actions */}
-        <div className={`flex items-center justify-end gap-3 pt-4 border-t ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-        }`}>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={loading || loadingData}
-            className={`px-4 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 ${
-              theme === 'dark'
-                ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
-                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            Cancelar
-          </button>
-          <Button
-            type="submit"
-            disabled={loading || loadingData || !formData.nombre.trim() || !formData.apellido.trim() || !formData.correoElectronico.trim()}
-            variant="primary"
-            className="flex items-center gap-2"
-          >
-            <User size={16} />
-            {loading ? 'Guardando...' : editingEmpleado ? 'Actualizar' : 'Crear Empleado'}
-          </Button>
-        </div>
       </form>
     </Modal>
   );

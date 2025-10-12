@@ -29,6 +29,7 @@ import {
   FacturaDetalleModal, 
   GenerarFacturasModal 
 } from '@/components/finanzas/cartera';
+import { ConfiguracionCarteraForm } from '@/components/finanzas/cartera/ConfiguracionCarteraForm';
 import type { Factura, Pago, CreatePagoDto, FiltrosFacturasDto, TipoRecordatorio } from '@/lib/service-cartera';
 import {
   getFacturas,
@@ -383,11 +384,19 @@ export default function CarteraPage() {
           )}
 
           {activeTab === 'configuracion' && (
-            <div className="text-center py-12">
-              <Settings size={64} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-4 opacity-20" />
-              <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
-                Configuración de cartera en desarrollo
-              </p>
+            <div>
+              {token ? (
+                // Lazy import para no incrementar el bundle inicial de la vista
+                // pero aquí, por simplicidad, importaremos directamente el componente
+                <ConfiguracionCarteraForm token={token} />
+              ) : (
+                <div className="text-center py-12">
+                  <Settings size={64} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-4 opacity-20" />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
+                    Debes iniciar sesión para ver la configuración
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

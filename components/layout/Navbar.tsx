@@ -174,14 +174,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   };
 
   return (
-    <header
-      className="w-full h-16 border-b flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-md"
-      style={{ 
-        background: 'var(--surface)', 
-        borderColor: 'var(--border)',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-      }}
-    >
+    <header className="w-full h-16 border-b border-border bg-surface/80 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 shadow-sm">
       {/* Left section */}
       <div className="flex items-center gap-4 min-w-0 flex-1">
         {/* Mobile menu button */}
@@ -189,25 +182,21 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           type="button"
           aria-label="Abrir menú"
           onClick={onMenuClick}
-          className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{ border: '1px solid var(--border)' }}
+          className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
         >
-          <Menu size={20} />
+          <Menu size={20} className="text-primary" />
         </button>
 
         {/* Branding */}
         <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition-transform duration-200 hover:scale-105"
-            style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
-          >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition-transform duration-200 hover:scale-105 bg-ot-gradient">
             <span className="text-white font-bold text-sm">OT</span>
           </div>
           <div className="hidden sm:block min-w-0">
-            <h1 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+            <h1 className="font-semibold text-sm truncate text-primary">
               OnlyTop
             </h1>
-            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs truncate text-muted">
               Dashboard
             </p>
           </div>
@@ -215,18 +204,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
         {/* Search bar - Desktop */}
         <div className="hidden md:flex flex-1 max-w-md ml-4">
-          <div 
-            className="relative w-full group"
-            style={{
-              transition: 'all 0.2s ease'
-            }}
-          >
+          <div className="relative w-full group transition-all duration-200">
             <Search 
               size={16} 
-              className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200"
-              style={{ 
-                color: searchFocused ? 'var(--ot-blue-500)' : 'var(--text-muted)' 
-              }}
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
+                searchFocused ? 'text-blue-500' : 'text-muted'
+              }`}
             />
             <input
               ref={searchRef}
@@ -234,24 +217,19 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               placeholder="Buscar..."
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              className="w-full h-10 pl-10 pr-20 rounded-lg outline-none transition-all duration-200"
-              style={{
-                background: 'var(--background)',
-                border: `1.5px solid ${searchFocused ? 'var(--ot-blue-500)' : 'var(--border)'}`,
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem'
-              }}
+              className={`w-full h-10 pl-10 pr-20 rounded-lg outline-none transition-all duration-200 bg-background text-primary text-sm ${
+                searchFocused 
+                  ? 'border-2 border-blue-500' 
+                  : 'border-2 border-border'
+              }`}
             />
             <div 
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded"
-              style={{ 
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                opacity: searchFocused ? 0 : 0.6
-              }}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded bg-surface border border-border transition-opacity duration-200 ${
+                searchFocused ? 'opacity-0' : 'opacity-60'
+              }`}
             >
-              <Command size={12} style={{ color: 'var(--text-muted)' }} />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>K</span>
+              <Command size={12} className="text-muted" />
+              <span className="text-xs text-muted">K</span>
             </div>
           </div>
         </div>
@@ -262,29 +240,21 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         {/* Search button - Mobile */}
         <button 
           onClick={() => searchRef.current?.focus()}
-          className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{ border: '1px solid var(--border)' }}
+          className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
           aria-label="Buscar"
         >
-          <Search size={18} />
+          <Search size={18} className="text-primary" />
         </button>
 
         {/* Real-time clock */}
-        <div 
-          className="hidden lg:flex items-center px-3 py-2 rounded-lg"
-          style={{ 
-            background: 'var(--surface-muted)', 
-            border: '1px solid var(--border)' 
-          }}
-        >
+        <div className="hidden lg:flex items-center px-3 py-2 rounded-lg bg-surface-muted border border-border">
           <RealTimeClock showIcon={true} />
         </div>
 
         {/* Theme toggle */}
         <button 
           onClick={toggleTheme} 
-          className="inline-flex items-center justify-center w-10 h-10 rounded-lg ot-hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{ border: '1px solid var(--border)' }}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border hover-surface transition-all duration-200 hover:scale-105 active:scale-95"
           aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
         >

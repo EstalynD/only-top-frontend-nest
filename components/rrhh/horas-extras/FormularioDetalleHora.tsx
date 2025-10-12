@@ -2,6 +2,7 @@
 import React from 'react';
 import { Plus, Trash2, Clock } from 'lucide-react';
 import { Select, SelectField } from '@/components/ui/selectUI';
+import { Button } from '@/components/ui/Button';
 import {
   TipoHoraExtra,
   CreateDetalleHoraExtraDto,
@@ -70,24 +71,16 @@ export default function FormularioDetalleHora({
           <Clock size={16} style={{ color: 'var(--ot-blue-500)' }} />
           Detalles de Horas Extras
         </h3>
-        <button
+        <Button
           type="button"
           onClick={agregarDetalle}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-          style={{
-            background: 'var(--ot-blue-500)',
-            color: '#ffffff',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--ot-blue-600)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--ot-blue-500)';
-          }}
+          variant="primary"
+          size="sm"
+          icon={<Plus size={16} />}
+          iconPosition="left"
         >
-          <Plus size={16} />
           Agregar Hora Extra
-        </button>
+        </Button>
       </div>
 
       {detalles.length === 0 ? (
@@ -131,21 +124,15 @@ export default function FormularioDetalleHora({
                 >
                   Hora Extra #{index + 1}
                 </h4>
-                <button
+                <Button
                   type="button"
                   onClick={() => eliminarDetalle(index)}
-                  className="p-1.5 rounded-lg transition-colors"
-                  style={{ color: 'var(--danger)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--danger-muted)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
+                  variant="danger"
+                  size="sm"
+                  icon={<Trash2 size={16} />}
+                  ariaLabel="Eliminar hora extra"
                   title="Eliminar"
-                >
-                  <Trash2 size={16} />
-                </button>
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

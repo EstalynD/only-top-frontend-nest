@@ -259,7 +259,7 @@ export function CampaignFormModal({ isOpen, onClose, onSuccess, campaign, modelo
       isOpen={isOpen}
       onClose={onClose}
       title={campaign ? 'Editar Campaña' : 'Nueva Campaña'}
-      maxWidth="max-w-4xl"
+      maxWidth="4xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {error && (

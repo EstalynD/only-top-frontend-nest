@@ -37,8 +37,9 @@ export function getContratoById(id: string, token: string) {
 
 // Obtener contratos por empleado
 export function getContratosByEmpleado(empleadoId: string, token: string) {
-  return requestJSON<{ success: boolean; data: Contrato[] }>(RRHH_ROUTES.contratosByEmpleado(empleadoId), {
+  return requestJSON<Contrato[]>(RRHH_ROUTES.contratosByEmpleado(empleadoId), {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
   });
 }
 
@@ -110,7 +111,7 @@ export function marcarContratosVencidos(token: string) {
 
 // Obtener estadísticas de contratos
 export function getEstadisticasContratos(token: string) {
-  return requestJSON<{ success: boolean; data: ContratosStats }>(RRHH_ROUTES.estadisticasContratos, {
+  return requestJSON<ContratosStats>(RRHH_ROUTES.estadisticasContratos, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -133,9 +134,46 @@ export function buscarContratos(filtros: ContratosFiltros, token: string) {
   });
 }
 
-// Generar PDF del contrato
+// Generar PDF del contrato (dinámico con plantilla)
+export interface PdfContratoResponse {
+  filename: string;
+  mimeType: string;
+  pdfBuffer: string; // base64
+}
+
 export function generarPdfContrato(id: string, token: string) {
-  return requestJSON<{ success: boolean; message: string; data: { urlPdf: string } }>(RRHH_ROUTES.generarPdfContrato(id), {
+  return requestJSON<PdfContratoResponse>(RRHH_ROUTES.generarPdfContrato(id), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
+// ========== PLANTILLAS DE CONTRATOS ==========
+
+// Generar contrato laboral usando plantilla
+export function generarContratoLaboral(empleadoId: string, token: string) {
+  return requestJSON<{ success: boolean; message: string; data: Buffer }>(RRHH_ROUTES.generarContratoLaboral(empleadoId), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Obtener información del contrato laboral (sin PDF)
+export function getInfoContratoLaboral(empleadoId: string, token: string) {
+  return requestJSON<{ success: boolean; data: any }>(RRHH_ROUTES.getInfoContratoLaboral(empleadoId), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Validar si existe plantilla para el empleado
+export function validarPlantillaContrato(empleadoId: string, token: string) {
+  return requestJSON<{ success: boolean; data: { tienePlantilla: boolean; templateId?: string; templateName?: string } }>(RRHH_ROUTES.validarPlantillaContrato(empleadoId), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Obtener plantillas disponibles
+export function getPlantillasContratos(token: string) {
+  return requestJSON<{ success: boolean; data: any[] }>(RRHH_ROUTES.plantillasContratos, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

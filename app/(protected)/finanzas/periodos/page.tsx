@@ -14,6 +14,7 @@ import {
 } from '@/lib/service-finanzas';
 import { PeriodosConsolidadosTable } from '@/components/finanzas/PeriodosConsolidadosTable';
 import { RefreshCw, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 export default function PeriodosConsolidadosPage() {
   const { token } = useAuth();
@@ -87,18 +88,15 @@ export default function PeriodosConsolidadosPage() {
           </p>
         </div>
 
-        <button
+        <Button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="p-3 rounded-lg transition-all disabled:opacity-50"
-          style={{
-            background: 'var(--surface-muted)',
-            color: 'var(--text-primary)',
-          }}
-          title="Actualizar lista"
-        >
-          <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-        </button>
+          variant="neutral"
+          size="sm"
+          icon={<RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />}
+          loading={refreshing}
+          ariaLabel="Actualizar lista"
+        />
       </div>
 
       {/* Totales Globales */}

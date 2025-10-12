@@ -56,6 +56,8 @@ export function FacturaDetalleModal({
 
   const getEstadoColor = () => {
     switch (factura.estado) {
+      case 'SEGUIMIENTO':
+        return 'text-cyan-600 dark:text-cyan-400';
       case 'PAGADO':
         return 'text-green-600 dark:text-green-400';
       case 'VENCIDO':
@@ -75,7 +77,7 @@ export function FacturaDetalleModal({
       onClose={onClose}
       title={`Detalle de Factura ${factura.numeroFactura}`}
       icon={<FileText size={20} style={{ color: 'var(--text-primary)' }} />}
-      maxWidth="max-w-4xl"
+      maxWidth="4xl"
     >
       <div className="p-6 space-y-6">
         {/* Header con acciones */}
@@ -121,7 +123,7 @@ export function FacturaDetalleModal({
               </button>
             )}
 
-            {onEnviarRecordatorio && factura.estado !== 'PAGADO' && factura.estado !== 'CANCELADO' && (
+            {onEnviarRecordatorio && factura.estado !== 'PAGADO' && factura.estado !== 'CANCELADO' && factura.estado !== 'SEGUIMIENTO' && (
               <button
                 onClick={onEnviarRecordatorio}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors flex items-center gap-2"
@@ -132,7 +134,7 @@ export function FacturaDetalleModal({
               </button>
             )}
 
-            {onRegistrarPago && factura.estado !== 'PAGADO' && factura.estado !== 'CANCELADO' && (
+            {onRegistrarPago && factura.estado !== 'PAGADO' && factura.estado !== 'CANCELADO' && factura.estado !== 'SEGUIMIENTO' && (
               <button
                 onClick={onRegistrarPago}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors flex items-center gap-2"

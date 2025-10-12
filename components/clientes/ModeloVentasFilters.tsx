@@ -2,6 +2,7 @@
 import React from 'react';
 import { Filter, X, Calendar } from 'lucide-react';
 import { SelectField } from '@/components/ui/selectUI';
+import { Button } from '@/components/ui/Button';
 import type { SalesFilters, TipoVenta, TurnoChatter } from '@/lib/service-modelos-ventas/types';
 import { TIPO_VENTA_OPTIONS, TURNO_OPTIONS } from '@/lib/service-modelos-ventas/constants';
 
@@ -67,27 +68,34 @@ export function ModeloVentasFilters({
 
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
-            <button
+            <Button
               type="button"
               onClick={onClear}
-              className="text-xs px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
-              style={{ color: 'var(--text-muted)', background: 'var(--surface-muted)' }}
+              variant="ghost"
+              size="sm"
+              icon={<X size={14} />}
+              style={{
+                fontSize: '0.75rem',
+                padding: '0.375rem 0.75rem'
+              }}
             >
-              <X size={14} />
               Limpiar
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs px-3 py-1.5 rounded-md transition-colors"
-            style={{ 
+            variant="primary"
+            size="sm"
+            style={{
+              fontSize: '0.75rem',
+              padding: '0.375rem 0.75rem',
               background: 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))',
               color: '#ffffff'
             }}
           >
             {isExpanded ? 'Ocultar' : 'Mostrar'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -182,17 +190,19 @@ export function ModeloVentasFilters({
 
           {/* Apply Button */}
           <div className="pt-2">
-            <button
+            <Button
               type="button"
               onClick={onApply}
-              className="w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+              variant="primary"
+              size="md"
+              full
               style={{
                 background: 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))',
                 color: '#ffffff',
               }}
             >
               Aplicar filtros
-            </button>
+            </Button>
           </div>
         </div>
       )}

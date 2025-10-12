@@ -69,7 +69,7 @@ export default function GastoFijoForm({
   );
   const [categoria, setCategoria] = useState<CategoriaGasto>(initialData?.categoria || ('OTROS' as CategoriaGasto));
   const [empleadoId, setEmpleadoId] = useState(initialData?.empleadoId || '');
-  const [montoUSD, setMontoUSD] = useState(initialData?.montoOriginalUSD ? parseFloat(initialData.montoOriginalUSD.replace(/[^0-9.-]+/g, '')) : 0);
+  const [montoUSD, setMontoUSD] = useState(initialData?.montoUSD || 0);
   const [concepto, setConcepto] = useState(initialData?.concepto || '');
   const [fechaPago, setFechaPago] = useState(initialData?.fechaPago?.split('T')[0] || '');
   const [numeroFactura, setNumeroFactura] = useState(initialData?.numeroFactura || '');
@@ -268,7 +268,7 @@ export default function GastoFijoForm({
       onClose={onClose}
       title={isEditing ? 'Editar Gasto Fijo' : 'Nuevo Gasto Fijo'}
       icon={headerIcon}
-      maxWidth="max-w-3xl"
+      maxWidth="3xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error message */}

@@ -152,7 +152,7 @@ export default function ImportExcelModal({
       onClose={handleClose}
       title="Importar Ventas desde Excel"
       icon={<Upload size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-3xl"
+      maxWidth="3xl"
     >
       <div className="p-6 space-y-6">
         {/* Área de carga de archivo */}

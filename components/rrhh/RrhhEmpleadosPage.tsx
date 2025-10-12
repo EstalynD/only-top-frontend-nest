@@ -34,6 +34,8 @@ import Loader from '@/components/ui/Loader';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/Button';
+import DataTable, { Column } from '@/components/ui/DataTable';
+import { SelectField, SelectOption } from '@/components/ui/selectUI';
 import { useTheme } from '@/lib/theme';
 import EmpleadoModal from './EmpleadoModal';
 import ContratoModal from './ContratoModal';
@@ -49,7 +51,7 @@ import {
   getAllCargos
 } from '@/lib/service-rrhh/api';
 import { 
-  formatSalaryRange,
+ 
   getHierarchyLevelLabel,
   searchEmpleados,
   filterActiveItems
@@ -75,6 +77,9 @@ export default function RrhhEmpleadosPage({ token }: Props) {
   const [selectedCargo, setSelectedCargo] = React.useState<string>('');
   const [selectedEmpleado, setSelectedEmpleado] = React.useState<Empleado | null>(null);
   
+  // Paginación (manejada por DataTable)
+  const [itemsPerPage] = React.useState(10);
+  
   // Modales
   const [empleadoModalOpen, setEmpleadoModalOpen] = React.useState(false);
   const [contratoModalOpen, setContratoModalOpen] = React.useState(false);
@@ -87,6 +92,209 @@ export default function RrhhEmpleadosPage({ token }: Props) {
     open: boolean;
   } | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+
+  // Configuración de columnas para DataTable
+  const columns: Column<Empleado>[] = [
+    {
+      key: 'empleado',
+      title: 'Empleado',
+      dataIndex: 'nombre',
+      sortable: true,
+      searchable: true,
+      align: 'left',
+      render: (value, record) => {
+        const area = typeof record.areaId === 'string' ? null : record.areaId;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style={{ background: area?.color || '#6b7280' }}>
+              {record.fotoPerfil ? (
+                <img 
+                  src={record.fotoPerfil} 
+                  alt={`${record.nombre} ${record.apellido}`}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                />
+              ) : (
+                <User size={16} className="text-white" />
+              )}
+            </div>
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                {record.nombre} {record.apellido}
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {new Date(record.fechaInicio).toLocaleDateString('es-CO')}
+              </div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'cargo',
+      title: 'Cargo',
+      dataIndex: 'cargoId',
+      sortable: true,
+      searchable: true,
+      align: 'left',
+      render: (value) => {
+        const cargo = typeof value === 'string' ? null : value;
+        return (
+          <div className="text-sm" style={{ color: 'var(--text-primary)' }}>
+            {cargo?.name || 'Sin cargo'}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'area',
+      title: 'Área',
+      dataIndex: 'areaId',
+      sortable: true,
+      searchable: true,
+      align: 'left',
+      render: (value) => {
+        const area = typeof value === 'string' ? null : value;
+        return (
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ background: area?.color || '#6b7280' }}
+            />
+            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+              {area?.name || 'Sin área'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'contacto',
+      title: 'Contacto',
+      dataIndex: 'correoElectronico',
+      sortable: true,
+      searchable: true,
+      align: 'left',
+      render: (value, record) => (
+        <div className="space-y-1">
+          <div className="text-xs" style={{ color: 'var(--text-primary)' }}>
+            {record.correoElectronico}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {record.telefono}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'salario',
+      title: 'Salario',
+      dataIndex: 'salario',
+      sortable: true,
+      align: 'right',
+      render: (value) => (
+        <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+          {value ? 
+            `${value.moneda} ${value.monto.toLocaleString('es-CO')}` 
+            : 'Sin salario'
+          }
+        </div>
+      ),
+    },
+    {
+      key: 'estado',
+      title: 'Estado',
+      dataIndex: 'estado',
+      sortable: true,
+      align: 'left',
+      render: (value) => (
+        <span 
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+          style={{ 
+            background: `${getEstadoColor(value)}15`,
+            color: getEstadoColor(value),
+            border: `1px solid ${getEstadoColor(value)}30`
+          }}
+        >
+          {getEstadoIcon(value)}
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'acciones',
+      title: 'Acciones',
+      dataIndex: '_id',
+      sortable: false,
+      align: 'right',
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditEmpleado(record);
+            }}
+            className="p-2 rounded-lg transition-colors"
+            style={{ 
+              color: 'var(--text-muted)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--surface-muted)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
+            title="Editar empleado"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openContratoModal(record);
+            }}
+            className="p-2 rounded-lg transition-colors"
+            style={{ 
+              color: 'var(--text-muted)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--surface-muted)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
+            title="Ver contratos"
+          >
+            <FileText size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openDeleteConfirm(record);
+            }}
+            className="p-2 rounded-lg transition-colors"
+            style={{ 
+              color: '#ef4444',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#fef2f2';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#ef4444';
+            }}
+            title="Eliminar empleado"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   const loadData = React.useCallback(async () => {
     try {
@@ -121,6 +329,23 @@ export default function RrhhEmpleadosPage({ token }: Props) {
   const filteredEmpleados = React.useMemo(() => {
     return searchEmpleados(empleados, searchQuery);
   }, [empleados, searchQuery]);
+
+  // Opciones para los selects
+  const areaOptions: SelectOption[] = React.useMemo(() => [
+    { value: '', label: 'Todas las áreas' },
+    ...areas.map(area => ({
+      value: area._id,
+      label: area.name
+    }))
+  ], [areas]);
+
+  const cargoOptions: SelectOption[] = React.useMemo(() => [
+    { value: '', label: 'Todos los cargos' },
+    ...cargos.map(cargo => ({
+      value: cargo._id,
+      label: cargo.name
+    }))
+  ], [cargos]);
 
   const handleEmpleadoSuccess = () => {
     setEmpleadoModalOpen(false);
@@ -179,6 +404,10 @@ export default function RrhhEmpleadosPage({ token }: Props) {
 
   const viewEmpleadoDetails = (empleado: Empleado) => {
     router.push(`/rrhh/empleados/${empleado._id}`);
+  };
+
+  const handleRowClick = (empleado: Empleado) => {
+    viewEmpleadoDetails(empleado);
   };
 
   const openContratoModal = async (empleado: Empleado) => {
@@ -400,39 +629,25 @@ export default function RrhhEmpleadosPage({ token }: Props) {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select
+            <SelectField
+              label="Filtrar por área"
               value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value)}
-              className={`px-4 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'border-gray-600 bg-gray-800 text-white'
-                  : 'border-gray-200 bg-white text-gray-900'
-              }`}
-            >
-              <option value="">Todas las áreas</option>
-              {areas.map((area) => (
-                <option key={area._id} value={area._id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedArea}
+              options={areaOptions}
+              placeholder="Seleccionar área"
+              clearable
+              size="md"
+            />
 
-            <select
+            <SelectField
+              label="Filtrar por cargo"
               value={selectedCargo}
-              onChange={(e) => setSelectedCargo(e.target.value)}
-              className={`px-4 py-3 rounded-xl border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'border-gray-600 bg-gray-800 text-white'
-                  : 'border-gray-200 bg-white text-gray-900'
-              }`}
-            >
-              <option value="">Todos los cargos</option>
-              {cargos.map((cargo) => (
-                <option key={cargo._id} value={cargo._id}>
-                  {cargo.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedCargo}
+              options={cargoOptions}
+              placeholder="Seleccionar cargo"
+              clearable
+              size="md"
+            />
           </div>
           
           <div className="flex items-center gap-2 sm:gap-3">
@@ -467,244 +682,27 @@ export default function RrhhEmpleadosPage({ token }: Props) {
         </div>
       </div>
 
-      {/* Empleados List */}
-      {filteredEmpleados.length === 0 ? (
-        <div className="text-center py-12 sm:py-16">
-          <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-          }`}>
-            <Users size={32} className={`sm:w-10 sm:h-10 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-400'
-            }`} />
-          </div>
-          <h3 className={`text-lg sm:text-xl font-semibold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            {searchQuery ? 'No se encontraron resultados' : 'No hay empleados registrados'}
-          </h3>
-          <p className={`text-sm sm:text-base mb-6 max-w-md mx-auto ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            {searchQuery 
-              ? 'Intenta con otros términos de búsqueda o ajusta los filtros'
-              : 'Comienza registrando tu primer empleado en el sistema'
-            }
-          </p>
-          {!searchQuery && (
-            <Button
-              onClick={() => setEmpleadoModalOpen(true)}
-              variant="primary"
-              className="px-6 py-3 rounded-xl font-medium"
-            >
-              Registrar Primer Empleado
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {filteredEmpleados.map((empleado) => {
-            const area = typeof empleado.areaId === 'string' ? null : empleado.areaId;
-            const cargo = typeof empleado.cargoId === 'string' ? null : empleado.cargoId;
-            
-            return (
-              <div
-                key={empleado._id}
-                className={`rounded-xl border p-4 sm:p-6 transition-all duration-200 hover:shadow-lg group ${
-                  theme === 'dark'
-                    ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800/70 hover:border-gray-600'
-                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                }`}
-              >
-                {/* Empleado Header */}
-                <div className="flex items-start justify-between mb-4 sm:mb-6">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-sm" style={{ background: area?.color || '#6b7280' }}>
-                      {empleado.fotoPerfil ? (
-                        <img 
-                          src={empleado.fotoPerfil} 
-                          alt={`${empleado.nombre} ${empleado.apellido}`}
-                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white"
-                        />
-                      ) : (
-                        <User size={20} className="text-white sm:w-6 sm:h-6" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`font-semibold text-sm sm:text-base truncate ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {empleado.nombre} {empleado.apellido}
-                      </h3>
-                      <p className={`text-xs sm:text-sm truncate ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                      }`}>
-                        {cargo?.name || 'Sin cargo asignado'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                      style={{ 
-                        background: `${getEstadoColor(empleado.estado)}15`,
-                        color: getEstadoColor(empleado.estado),
-                        border: `1px solid ${getEstadoColor(empleado.estado)}30`
-                      }}
-                    >
-                      {getEstadoIcon(empleado.estado)}
-                      <span className="hidden sm:inline">{empleado.estado}</span>
-                    </span>
-                    
-                    <div className="relative">
-                      <button
-                        className="p-2 rounded-lg transition-colors hover:bg-gray-100 group-hover:bg-gray-50"
-                        onClick={() => setSelectedEmpleado(selectedEmpleado?._id === empleado._id ? null : empleado)}
-                      >
-                        <MoreHorizontal size={16} className="text-gray-500" />
-                      </button>
-                      
-                      {selectedEmpleado?._id === empleado._id && (
-                        <div 
-                          className={`absolute right-0 top-10 w-48 sm:w-52 rounded-xl border shadow-xl z-20 py-2 ${
-                            theme === 'dark'
-                              ? 'border-gray-600 bg-gray-800'
-                              : 'border-gray-200 bg-white'
-                          }`}
-                        >
-                          <button
-                            onClick={() => {
-                              viewEmpleadoDetails(empleado);
-                              setSelectedEmpleado(null);
-                            }}
-                            className={`w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors duration-150 ${
-                              theme === 'dark'
-                                ? 'hover:bg-gray-700 text-gray-300'
-                                : 'hover:bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            <Eye size={16} className="text-gray-500" />
-                            Ver detalles
-                          </button>
-                          <button
-                            onClick={() => {
-                              openEditEmpleado(empleado);
-                              setSelectedEmpleado(null);
-                            }}
-                            className={`w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors duration-150 ${
-                              theme === 'dark'
-                                ? 'hover:bg-gray-700 text-gray-300'
-                                : 'hover:bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            <Edit2 size={16} className="text-gray-500" />
-                            Editar empleado
-                          </button>
-                          <button
-                            onClick={() => {
-                              openContratoModal(empleado);
-                              setSelectedEmpleado(null);
-                            }}
-                            className={`w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors duration-150 ${
-                              theme === 'dark'
-                                ? 'hover:bg-gray-700 text-gray-300'
-                                : 'hover:bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            <FileText size={16} className="text-gray-500" />
-                            Ver contratos
-                          </button>
-                          <button
-                            onClick={() => {
-                              openDeleteConfirm(empleado);
-                              setSelectedEmpleado(null);
-                            }}
-                            className={`w-full px-4 py-3 text-left text-sm flex items-center gap-3 transition-colors duration-150 ${
-                              theme === 'dark'
-                                ? 'hover:bg-red-900/30 text-red-400'
-                                : 'hover:bg-red-50 text-red-600'
-                            }`}
-                          >
-                            <Trash2 size={16} className="text-red-500" />
-                            Eliminar empleado
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Información del empleado */}
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-50'
-                    }`}>
-                      <Mail size={14} className={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} />
-                    </div>
-                    <span className={`truncate ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>{empleado.correoElectronico}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      theme === 'dark' ? 'bg-green-900/30' : 'bg-green-50'
-                    }`}>
-                      <Phone size={14} className={theme === 'dark' ? 'text-green-400' : 'text-green-600'} />
-                    </div>
-                    <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>{empleado.telefono}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      theme === 'dark' ? 'bg-purple-900/30' : 'bg-purple-50'
-                    }`}>
-                      <MapPin size={14} className={theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} />
-                    </div>
-                    <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>{empleado.ciudad}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      theme === 'dark' ? 'bg-orange-900/30' : 'bg-orange-50'
-                    }`}>
-                      <Building2 size={14} className={theme === 'dark' ? 'text-orange-400' : 'text-orange-600'} />
-                    </div>
-                    <span className={`truncate ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>{area?.name || 'Sin área'}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      theme === 'dark' ? 'bg-emerald-900/30' : 'bg-emerald-50'
-                    }`}>
-                      <DollarSign size={14} className={theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'} />
-                    </div>
-                    <span className={`font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
-                      {formatSalaryRange(empleado.salario.monto, empleado.salario.monto, empleado.salario.moneda)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      theme === 'dark' ? 'bg-indigo-900/30' : 'bg-indigo-50'
-                    }`}>
-                      <Calendar size={14} className={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />
-                    </div>
-                    <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-                      Inició: {new Date(empleado.fechaInicio).toLocaleDateString('es-CO')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Tabla de Empleados con DataTable */}
+      <DataTable
+        data={filteredEmpleados}
+        columns={columns}
+        loading={loading}
+        searchable={false} // Ya tenemos búsqueda personalizada arriba
+        pagination={{
+          pageSize: itemsPerPage,
+          showSizeChanger: false,
+          showQuickJumper: false,
+        }}
+        onRowClick={handleRowClick}
+        emptyState={{
+          icon: <Users size={48} />,
+          title: searchQuery ? 'No se encontraron resultados' : 'No hay empleados registrados',
+          description: searchQuery 
+            ? 'Intenta con otros términos de búsqueda o ajusta los filtros'
+            : 'Comienza registrando tu primer empleado en el sistema'
+        }}
+        className="mt-6"
+      />
 
       {/* Modales */}
       <EmpleadoModal

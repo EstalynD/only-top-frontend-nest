@@ -60,8 +60,8 @@ export function formatPeriodo(periodo: PeriodoFacturacion): string {
  * Calcula días vencidos de una factura
  */
 export function calcularDiasVencido(fechaVencimiento: string, estado: EstadoFactura): number {
-  if (estado === EstadoFactura.PAGADO || estado === EstadoFactura.CANCELADO) {
-    return 0;
+  if (estado === EstadoFactura.SEGUIMIENTO || estado === EstadoFactura.PAGADO || estado === EstadoFactura.CANCELADO) {
+    return 0; // Facturas en seguimiento, pagadas o canceladas no tienen días vencidos
   }
 
   const hoy = new Date();
@@ -155,15 +155,16 @@ export function sortByFechaVencimiento(a: Factura, b: Factura): number {
 }
 
 /**
- * Compara facturas por estado (prioridad: VENCIDO > PARCIAL > PENDIENTE > PAGADO > CANCELADO)
+ * Compara facturas por estado (prioridad: VENCIDO > PARCIAL > PENDIENTE > SEGUIMIENTO > PAGADO > CANCELADO)
  */
 export function sortByEstadoPrioridad(a: Factura, b: Factura): number {
   const prioridad: Record<EstadoFactura, number> = {
     [EstadoFactura.VENCIDO]: 1,
     [EstadoFactura.PARCIAL]: 2,
     [EstadoFactura.PENDIENTE]: 3,
-    [EstadoFactura.PAGADO]: 4,
-    [EstadoFactura.CANCELADO]: 5,
+    [EstadoFactura.SEGUIMIENTO]: 4,
+    [EstadoFactura.PAGADO]: 5,
+    [EstadoFactura.CANCELADO]: 6,
   };
   
   return prioridad[a.estado] - prioridad[b.estado];

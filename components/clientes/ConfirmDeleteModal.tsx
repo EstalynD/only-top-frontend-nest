@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 type ConfirmDeleteModalProps = {
   isOpen: boolean;
@@ -48,14 +49,18 @@ export function ConfirmDeleteModal({
                 Confirmar Eliminación
               </h3>
             </div>
-            <button
+            <Button
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-all duration-200"
-              style={{ border: '1px solid var(--border)' }}
+              variant="ghost"
+              size="sm"
+              icon={<X size={18} />}
               disabled={loading}
-            >
-              <X size={18} style={{ color: 'var(--text-secondary)' }} />
-            </button>
+              style={{
+                border: '1px solid var(--border)',
+                padding: '0.375rem'
+              }}
+              ariaLabel="Cerrar modal"
+            />
           </div>
 
           {/* Content */}
@@ -74,31 +79,24 @@ export function ConfirmDeleteModal({
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 p-6 border-t" style={{ borderColor: 'var(--border)' }}>
-            <button
+            <Button
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200"
-              style={{
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
-                color: 'var(--text-secondary)',
-                opacity: loading ? 0.5 : 1,
-              }}
+              variant="neutral"
+              size="md"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onConfirm}
               disabled={loading}
-              className="px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200"
-              style={{
-                background: loading ? '#f87171' : '#ef4444',
-                color: '#ffffff',
-                opacity: loading ? 0.7 : 1,
-              }}
+              variant="danger"
+              size="md"
+              loading={loading}
+              loadingText="Eliminando..."
             >
-              {loading ? 'Eliminando...' : 'Sí, marcar como terminada'}
-            </button>
+              Sí, marcar como terminada
+            </Button>
           </div>
         </div>
       </div>

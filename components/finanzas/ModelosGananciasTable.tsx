@@ -12,6 +12,8 @@ import type { ModeloConGanancias } from '@/lib/service-finanzas';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { FinanzasStatusBadge } from '@/components/ui/FinanzasStatusBadge';
 import { CurrencyCode } from '@/lib/utils/money';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/selectUI';
 
 interface ModelosGananciasTableProps {
   modelos: ModeloConGanancias[];
@@ -186,30 +188,21 @@ export function ModelosGananciasTable({
 
         {/* Filtro de Estado */}
         <div className="sm:w-64">
-          <div className="relative">
-            <Filter
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2"
-              style={{ color: 'var(--text-muted)' }}
-            />
-            <select
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[var(--ot-blue-500)] appearance-none cursor-pointer"
-              style={{
-                background: 'var(--input-bg)',
-                borderColor: 'var(--border)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              <option value="TODOS">Todos los estados</option>
-              <option value="SIN_CALCULAR">Sin calcular</option>
-              <option value="CALCULADO">Calculado</option>
-              <option value="PENDIENTE_REVISION">Pendiente revisión</option>
-              <option value="APROBADO">Aprobado</option>
-              <option value="PAGADO">Pagado</option>
-            </select>
-          </div>
+          <Select
+            value={filtroEstado}
+            onChange={setFiltroEstado}
+            options={[
+              { value: 'TODOS', label: 'Todos los estados' },
+              { value: 'SIN_CALCULAR', label: 'Sin calcular' },
+              { value: 'CALCULADO', label: 'Calculado' },
+              { value: 'PENDIENTE_REVISION', label: 'Pendiente revisión' },
+              { value: 'APROBADO', label: 'Aprobado' },
+              { value: 'PAGADO', label: 'Pagado' }
+            ]}
+            placeholder="Filtrar por estado"
+            size="sm"
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -337,41 +330,36 @@ export function ModelosGananciasTable({
                       <div className="flex items-center justify-center gap-2">
                         {modelo.finanzas ? (
                           <>
-                            <button
+                            <Button
                               onClick={() => onVerDetalle(modelo)}
-                              className="p-2 rounded-lg transition-colors hover:bg-opacity-10"
-                              style={{
-                                color: 'var(--ot-blue-500)',
-                                background: 'transparent',
-                              }}
-                              title="Ver detalle"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Eye size={16} />}
+                              style={{ color: 'var(--ot-blue-500)' }}
+                              ariaLabel="Ver detalle"
+                            />
+                            <Button
                               onClick={() => onCalcular(modelo.modeloId)}
-                              className="p-2 rounded-lg transition-colors hover:bg-opacity-10"
-                              style={{
-                                color: '#f59e0b',
-                                background: 'transparent',
-                              }}
-                              title="Recalcular"
-                            >
-                              <RefreshCw size={16} />
-                            </button>
+                              variant="ghost"
+                              size="sm"
+                              icon={<RefreshCw size={16} />}
+                              style={{ color: '#f59e0b' }}
+                              ariaLabel="Recalcular"
+                            />
                           </>
                         ) : (
-                          <button
+                          <Button
                             onClick={() => onCalcular(modelo.modeloId)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-90"
+                            variant="primary"
+                            size="sm"
+                            icon={<Calculator size={14} />}
                             style={{
                               background: 'var(--ot-blue-500)',
                               color: '#ffffff',
                             }}
                           >
-                            <Calculator size={14} className="inline mr-1" />
                             Calcular
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -449,41 +437,50 @@ export function ModelosGananciasTable({
                             color: 'var(--text-primary)',
                           }}
                         />
-                        <button
+                        <Button
                           onClick={handleActualizarComisionBanco}
-                          className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-90"
+                          variant="primary"
+                          size="sm"
                           style={{
                             background: 'var(--ot-blue-500)',
                             color: '#ffffff',
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.75rem'
                           }}
                         >
                           Aplicar
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => {
                             setEditandoComision(false);
                             setNuevoPortcentajeComision(totales.comisionBancoPromedio);
                           }}
-                          className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
+                          variant="neutral"
+                          size="sm"
                           style={{
                             background: 'var(--surface-muted)',
                             color: 'var(--text-muted)',
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.75rem'
                           }}
                         >
                           Cancelar
-                        </button>
+                        </Button>
                       </>
                     ) : (
-                      <button
+                      <Button
                         onClick={() => setEditandoComision(true)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-90"
+                        variant="ghost"
+                        size="sm"
                         style={{
                           background: 'var(--ot-blue-500)15',
                           color: 'var(--ot-blue-500)',
+                          padding: '0.375rem 0.75rem',
+                          fontSize: '0.75rem'
                         }}
                       >
                         Editar % Comisión
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </td>

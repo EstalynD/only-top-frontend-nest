@@ -29,6 +29,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/clientes/ConfirmDeleteModal';
+import { Button } from '@/components/ui/Button';
 
 export default function ModeloDetailPage() {
   const router = useRouter();
@@ -121,13 +122,13 @@ export default function ModeloDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <button
+          <Button
             onClick={() => router.back()}
-            className="p-2 rounded-lg transition-all duration-200"
-            style={{ border: '1px solid var(--border)' }}
-          >
-            <ArrowLeft size={20} style={{ color: 'var(--text-secondary)' }} />
-          </button>
+            variant="ghost"
+            size="sm"
+            icon={<ArrowLeft size={20} />}
+            ariaLabel="Volver atrás"
+          />
           <div className="flex items-center gap-4">
             {modelo.fotoPerfil ? (
               <img 
@@ -162,30 +163,22 @@ export default function ModeloDetailPage() {
           >
             {estadoInfo?.label || modelo.estado}
           </span>
-          <button
+          <Button
             onClick={() => router.push(`/clientes/modelos/${modelo._id}/editar`)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200"
-            style={{
-              border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              color: 'var(--text-primary)',
-            }}
+            variant="neutral"
+            size="md"
+            icon={<Edit size={18} />}
           >
-            <Edit size={18} />
             Editar
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setShowDeleteModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200"
-            style={{
-              border: '1px solid #ef4444',
-              background: 'var(--surface)',
-              color: '#ef4444',
-            }}
+            variant="danger"
+            size="md"
+            icon={<Trash2 size={18} />}
           >
-            <Trash2 size={18} />
             Eliminar
-          </button>
+          </Button>
         </div>
       </div>
 

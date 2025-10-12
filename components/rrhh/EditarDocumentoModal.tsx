@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import Modal from "@/components/ui/Modal";
-import { SelectField } from "@/components/ui/Select";
+import { Select } from "@/components/ui/selectUI";
 import { useAuth } from "@/lib/auth";
 import { updateDocumento, validarDocumento } from "@/lib/service-rrhh/documentos-api";
 import type { Documento, UpdateDocumentoDto, ValidarDocumentoDto } from "@/lib/service-rrhh/contratos-types";
@@ -180,7 +180,7 @@ export default function EditarDocumentoModal({ isOpen, onClose, documento, onUpd
       onClose={handleClose} 
       title="Editar Documento" 
       icon={<Edit3 size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-4xl"
+      maxWidth="4xl"
     >
       <div className="p-4 sm:p-6">
         {/* Alert Messages */}
@@ -279,14 +279,12 @@ export default function EditarDocumentoModal({ isOpen, onClose, documento, onUpd
                   <label className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
                     Tipo de documento <span className="text-red-500">*</span>
                   </label>
-                  <SelectField
+                  <Select
                     value={tipoDocumento}
                     onChange={setTipoDocumento}
                     options={TIPO_DOCUMENTO_OPCIONES}
                     placeholder="Seleccione el tipo..."
                     fullWidth
-                    required
-                    label=""
                   />
                 </div>
               </div>
@@ -461,14 +459,12 @@ export default function EditarDocumentoModal({ isOpen, onClose, documento, onUpd
                   <label className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
                     Nuevo estado <span className="text-red-500">*</span>
                   </label>
-                  <SelectField
+                  <Select
                     value={estado}
                     onChange={(v) => setEstado(v as 'APROBADO' | 'RECHAZADO')}
                     options={ESTADO_CAMBIO_OPCIONES}
                     placeholder="Seleccione nuevo estado..."
                     fullWidth
-                    required
-                    label=""
                   />
                 </div>
               </div>

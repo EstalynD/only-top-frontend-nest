@@ -4,11 +4,13 @@ import { CardSection } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
+import { useTheme } from '@/lib/theme';
 import { getAttendanceEnabledFrom, setAttendanceEnabledFrom, type AttendanceConfig } from '@/lib/service-sistema/attendance.api';
 import { toIsoFromLocalInput, toLocalDatetimeInputValue } from '@/lib/utils/datetime';
 
 export function AttendanceEnabledFromCard({ token, onUpdated }: { token: string; onUpdated: (cfg: AttendanceConfig) => void }) {
   const { toast } = useToast();
+  const { theme } = useTheme();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [currentIso, setCurrentIso] = React.useState<string | null>(null);
@@ -64,9 +66,11 @@ export function AttendanceEnabledFromCard({ token, onUpdated }: { token: string;
 
   return (
     <CardSection title="Habilitar Marcación desde" description="Define desde qué fecha y hora se permitirá registrar asistencia en todo el sistema.">
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="md:col-span-2">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        {/* Layout Responsivo */}
+        <div className="flex flex-col space-y-4 lg:flex-row lg:items-end lg:space-y-0 lg:gap-4">
+          {/* Input Field */}
+          <div className="flex-1 min-w-0">
             <Input
               type="datetime-local"
               label="Fecha y hora de habilitación"
@@ -75,14 +79,56 @@ export function AttendanceEnabledFromCard({ token, onUpdated }: { token: string;
               disabled={loading || saving}
             />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={loading || saving || !token}>Guardar</Button>
-            <Button variant="secondary" onClick={handleReset} disabled={loading || saving || !token}>Quitar restricción</Button>
+          
+          {/* Buttons - Responsive Layout */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 lg:flex-shrink-0">
+            <Button 
+              onClick={handleSave} 
+              disabled={loading || saving || !token}
+              className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
+              size="sm"
+            >
+              <span className="hidden sm:inline">Guardar</span>
+              <span className="sm:hidden">Guardar</span>
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleReset} 
+              disabled={loading || saving || !token}
+              className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base"
+              size="sm"
+            >
+              <span className="hidden sm:inline">Quitar restricción</span>
+              <span className="sm:hidden">Quitar</span>
+            </Button>
           </div>
         </div>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Actual: {currentIso ? new Date(currentIso).toLocaleString() : 'Sin restricción (permitido siempre)'}
-        </p>
+        
+        {/* Status Text - Responsive */}
+        <div className={`p-3 rounded-lg border ${
+          theme === 'dark' 
+            ? 'bg-gray-800/50 border-gray-700' 
+            : 'bg-gray-50 border-gray-200'
+        }`}>
+          <p className={`text-xs sm:text-sm ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            <span className="font-medium">Actual:</span>{' '}
+            {currentIso ? (
+              <span className={`${
+                theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              }`}>
+                {new Date(currentIso).toLocaleString()}
+              </span>
+            ) : (
+              <span className={`${
+                theme === 'dark' ? 'text-green-400' : 'text-green-600'
+              }`}>
+                Sin restricción (permitido siempre)
+              </span>
+            )}
+          </p>
+        </div>
       </div>
     </CardSection>
   );

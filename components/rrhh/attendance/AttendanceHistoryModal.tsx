@@ -3,9 +3,11 @@ import React from 'react';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 import { useToast } from '@/components/ui/Toast';
 import {
   getAdminUserAttendance,
+  getAdminEmployeeAttendance,
   getAdminAttendanceReport,
   type AttendanceRecord,
   type AttendanceSummary,
@@ -15,13 +17,15 @@ import {
   getStatusLabel,
   getTypeLabel
 } from '@/lib/service-rrhh/attendance.api';
+import { adminGetMemorandosUsuario, adminGetMemorandosEmpleado } from '@/lib/service-rrhh/memorandum.api';
+import type { Memorandum } from '@/lib/service-rrhh/memorandum-types';
+import { getMemorandumStatusLabel, getMemorandumTypeLabel } from '@/lib/service-rrhh/memorandum-types';
 import { getSelectedTimeFormat } from '@/lib/service-sistema/api';
 import type { TimeFormat } from '@/lib/service-sistema/types';
 import { MemorandumActions } from './MemorandumActions';
 import {
   Clock,
   Calendar,
-  TrendingUp,
   AlertCircle,
   CheckCircle,
   Coffee,
@@ -35,36 +39,40 @@ import Loader from '@/components/ui/Loader';
 interface AttendanceHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
+  userId: string; // Puede ser userId o empleadoId, el componente lo maneja
   titleSuffix?: string;
+  isEmpleadoId?: boolean; // Nuevo prop para indicar si el userId es realmente un empleadoId
 }
 
-type ViewMode = 'records' | 'summary';
+type ViewMode = 'records';
 type PeriodFilter = '7d' | '15d' | '30d' | 'custom';
 
 export default function AttendanceHistoryModal({ 
   isOpen, 
   onClose, 
   userId,
-  titleSuffix 
+  titleSuffix,
+  isEmpleadoId = false 
 }: AttendanceHistoryModalProps) {
   const { token } = useAuth();
+  const { theme } = useTheme();
   const { toast } = useToast();
   
   const [loading, setLoading] = React.useState(true);
   const [records, setRecords] = React.useState<AttendanceRecord[]>([]);
   const [summaries, setSummaries] = React.useState<AttendanceSummary[]>([]);
-  const [viewMode, setViewMode] = React.useState<ViewMode>('summary');
+  const [viewMode] = React.useState<ViewMode>('records');
   const [periodFilter, setPeriodFilter] = React.useState<PeriodFilter>('7d');
   const [customStartDate, setCustomStartDate] = React.useState('');
   const [customEndDate, setCustomEndDate] = React.useState('');
   const [timeFormat, setTimeFormat] = React.useState<TimeFormat>('24h');
+  const [memos, setMemos] = React.useState<Memorandum[]>([]);
 
   React.useEffect(() => {
-    if (!token || !isOpen) return;
+    if (!token || !isOpen || !userId) return;
     loadData();
     loadTimeFormat();
-  }, [token, isOpen, userId, periodFilter, customStartDate, customEndDate, viewMode]);
+  }, [token, isOpen, userId, periodFilter, customStartDate, customEndDate]);
 
   const loadTimeFormat = async () => {
     if (!token) return;
@@ -77,19 +85,27 @@ export default function AttendanceHistoryModal({
   };
 
   const loadData = async () => {
-    if (!token) return;
+    if (!token || !userId) return;
     
     setLoading(true);
     try {
       const { startDate, endDate } = getDateRange();
+
+      // Cargar asistencia y memorandos en paralelo
+      const recordsPromise = isEmpleadoId
+        ? getAdminEmployeeAttendance(token, userId, startDate, endDate, true)
+        : getAdminUserAttendance(token, userId, startDate, endDate, true);
       
-      if (viewMode === 'records') {
-        const data = await getAdminUserAttendance(token, userId, startDate, endDate, true);
-        setRecords(data);
-      } else {
-        const data = await getAdminAttendanceReport(token, userId, startDate, endDate);
-        setSummaries(data);
-      }
+      const memosPromise = isEmpleadoId
+        ? adminGetMemorandosEmpleado(token, userId, { startDate, endDate })
+        : adminGetMemorandosUsuario(token, userId, { startDate, endDate });
+      
+      const [recordsData, memosData] = await Promise.all([
+        recordsPromise,
+        memosPromise
+      ]);
+      setRecords(recordsData);
+      setMemos(memosData);
     } catch (error) {
       toast({
         type: 'error',
@@ -183,42 +199,28 @@ export default function AttendanceHistoryModal({
       onClose={onClose}
       title={`Historial de Asistencia${titleSuffix ? ` - ${titleSuffix}` : ''}`}
       icon={<Calendar size={20} style={{ color: 'var(--ot-blue-600)' }} />}
-      maxWidth="max-w-6xl"
+      maxWidth="7xl"
     >
-      <div className="p-4 sm:p-6 space-y-4">
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          {/* View Mode Toggle */}
+      <div className="space-y-6">
+        {/* Filters mejorados */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+          {/* Title section - only Records */}
           <div className="flex gap-2">
-            <Button
-              className="px-3 py-1.5 text-sm"
-              variant={viewMode === 'summary' ? 'primary' : 'secondary'}
-              onClick={() => setViewMode('summary')}
-            >
-              <TrendingUp size={16} className="mr-1" />
-              Resumen
-            </Button>
-            <Button
-              className="px-3 py-1.5 text-sm"
-              variant={viewMode === 'records' ? 'primary' : 'secondary'}
-              onClick={() => setViewMode('records')}
-            >
-              <Clock size={16} className="mr-1" />
-              Registros
-            </Button>
+            <span className={`inline-flex items-center text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <Clock size={16} className="mr-2" /> Registros
+            </span>
           </div>
 
           {/* Period Filter */}
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-3 items-center">
             <select
               value={periodFilter}
               onChange={(e) => setPeriodFilter(e.target.value as PeriodFilter)}
-              className="px-3 py-1.5 text-sm rounded-lg border outline-none"
-              style={{
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--text-primary)'
-              }}
+              className={`px-4 py-2 text-sm rounded-lg border outline-none transition-colors ${
+                theme === 'dark'
+                  ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                  : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+              }`}
             >
               <option value="7d">Últimos 7 días</option>
               <option value="15d">Últimos 15 días</option>
@@ -232,28 +234,26 @@ export default function AttendanceHistoryModal({
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border outline-none"
-                  style={{
-                    background: 'var(--background)',
-                    borderColor: 'var(--border)',
-                    color: 'var(--text-primary)'
-                  }}
+                  className={`px-4 py-2 text-sm rounded-lg border outline-none transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                      : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                  }`}
                 />
                 <input
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-lg border outline-none"
-                  style={{
-                    background: 'var(--background)',
-                    borderColor: 'var(--border)',
-                    color: 'var(--text-primary)'
-                  }}
+                  className={`px-4 py-2 text-sm rounded-lg border outline-none transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                      : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                  }`}
                 />
               </>
             )}
 
-            <Button className="px-3 py-1.5 text-sm" onClick={handleExport}>
+            <Button size="sm" onClick={handleExport}>
               <Download size={16} className="mr-1" />
               Exportar
             </Button>
@@ -267,11 +267,10 @@ export default function AttendanceHistoryModal({
           </div>
         ) : (
           <>
-            {viewMode === 'summary' ? (
-              <SummaryView summaries={summaries} use12h={use12h} userId={userId} />
-            ) : (
-              <RecordsView records={records} use12h={use12h} />
-            )}
+            <RecordsView records={records} use12h={use12h} theme={theme} />
+
+            {/* Memorandos del período */}
+            <MemorandumsPanel memos={memos} theme={theme} />
           </>
         )}
       </div>
@@ -279,146 +278,15 @@ export default function AttendanceHistoryModal({
   );
 }
 
-// Summary View Component
-function SummaryView({ summaries, use12h, userId }: { summaries: AttendanceSummary[]; use12h: boolean; userId: string }) {
-  if (summaries.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Calendar size={48} className="mx-auto mb-4 opacity-50" style={{ color: 'var(--text-muted)' }} />
-        <p style={{ color: 'var(--text-muted)' }}>No hay registros en este período</p>
-      </div>
-    );
-  }
-
-  // Calculate totals
-  const totals = summaries.reduce((acc, s) => ({
-    totalHours: acc.totalHours + s.workedHours,
-    lateCount: acc.lateCount + (s.isLate ? 1 : 0),
-    totalDays: acc.totalDays + (s.checkIn ? 1 : 0)
-  }), { totalHours: 0, lateCount: 0, totalDays: 0 });
-
-  return (
-    <div className="space-y-4">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-lg" style={{ background: 'var(--card-background)', border: '1px solid var(--border)' }}>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Horas Trabajadas</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
-            {formatDuration(totals.totalHours)}
-          </p>
-        </div>
-        
-        <div className="p-4 rounded-lg" style={{ background: 'var(--card-background)', border: '1px solid var(--border)' }}>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Días Trabajados</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
-            {totals.totalDays}
-          </p>
-        </div>
-        
-        <div className="p-4 rounded-lg" style={{ background: 'var(--card-background)', border: '1px solid var(--border)' }}>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Tardanzas</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: totals.lateCount > 0 ? 'var(--ot-yellow-600)' : 'var(--ot-green-600)' }}>
-            {totals.lateCount}
-          </p>
-        </div>
-      </div>
-
-      {/* Summary Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Fecha</th>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Entrada</th>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Salida</th>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Trabajadas</th>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Descanso</th>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Estado</th>
-              <th className="text-left p-3" style={{ color: 'var(--text-muted)' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summaries.map((summary) => (
-              <tr key={summary.date} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="p-3" style={{ color: 'var(--text-primary)' }}>
-                  {new Date(summary.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
-                </td>
-                <td className="p-3">
-                  {summary.checkIn ? (
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} style={{ color: 'var(--text-muted)' }} />
-                      <span style={{ color: 'var(--text-primary)' }}>
-                        {formatTime(summary.checkIn, use12h)}
-                      </span>
-                      {summary.isLate && (
-                        <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--ot-yellow-100)', color: 'var(--ot-yellow-700)' }}>
-                          +{summary.lateMinutes}m
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span style={{ color: 'var(--text-muted)' }}>-</span>
-                  )}
-                </td>
-                <td className="p-3">
-                  {summary.checkOut ? (
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} style={{ color: 'var(--text-muted)' }} />
-                      <span style={{ color: 'var(--text-primary)' }}>
-                        {formatTime(summary.checkOut, use12h)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span style={{ color: 'var(--text-muted)' }}>-</span>
-                  )}
-                </td>
-                <td className="p-3">
-                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {formatDuration(summary.workedHours)}
-                  </span>
-                  {summary.overtimeMinutes && summary.overtimeMinutes > 0 && (
-                    <span className="text-xs ml-2 px-2 py-0.5 rounded" style={{ background: 'var(--ot-blue-100)', color: 'var(--ot-blue-700)' }}>
-                      +{summary.overtimeMinutes}m extra
-                    </span>
-                  )}
-                </td>
-                <td className="p-3" style={{ color: 'var(--text-muted)' }}>
-                  {summary.breakHours > 0 ? formatDuration(summary.breakHours) : '-'}
-                </td>
-                <td className="p-3">
-                  <span
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                    style={{
-                      background: `${getStatusColor(summary.status)}20`,
-                      color: getStatusColor(summary.status)
-                    }}
-                  >
-                    {summary.status === 'PRESENT' && <CheckCircle size={12} />}
-                    {summary.status === 'LATE' && <AlertCircle size={12} />}
-                    {getStatusLabel(summary.status)}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <div style={{ maxWidth: '300px' }}>
-                    <MemorandumActions userId={userId} summary={summary} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+// (Resumen eliminado según requerimiento)
 
 // Records View Component
-function RecordsView({ records, use12h }: { records: AttendanceRecord[]; use12h: boolean }) {
+function RecordsView({ records, use12h, theme }: { records: AttendanceRecord[]; use12h: boolean; theme: 'light' | 'dark' }) {
   if (records.length === 0) {
     return (
       <div className="text-center py-12">
-        <Clock size={48} className="mx-auto mb-4 opacity-50" style={{ color: 'var(--text-muted)' }} />
-        <p style={{ color: 'var(--text-muted)' }}>No hay registros en este período</p>
+        <Clock size={48} className={`mx-auto mb-4 opacity-50 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+        <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>No hay registros en este período</p>
       </div>
     );
   }
@@ -432,24 +300,33 @@ function RecordsView({ records, use12h }: { records: AttendanceRecord[]; use12h:
   }, {} as Record<string, AttendanceRecord[]>);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {Object.entries(groupedRecords).map(([date, dayRecords]) => (
-        <div key={date} className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          <div className="p-3" style={{ background: 'var(--card-background)', borderBottom: '1px solid var(--border)' }}>
-            <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+        <div key={date} className={`rounded-lg overflow-hidden border ${
+          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        }`}>
+          <div className={`p-4 border-b ${
+            theme === 'dark' 
+              ? 'border-gray-700 bg-gray-800/50' 
+              : 'border-gray-200 bg-gray-50/50'
+          }`}>
+            <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
               {new Date(date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </h4>
           </div>
           
-          <div className="p-3 space-y-2">
+          <div className="p-4 space-y-3">
             {dayRecords.map((record) => (
               <div
                 key={record._id}
-                className="flex items-center gap-3 p-3 rounded-lg"
-                style={{ background: 'var(--background)' }}
+                className={`flex items-center gap-4 p-4 rounded-lg border ${
+                  theme === 'dark' 
+                    ? 'bg-gray-800/30 border-gray-700 hover:bg-gray-800/50' 
+                    : 'bg-gray-50/50 border-gray-200 hover:bg-gray-100/50'
+                } transition-colors`}
               >
                 <div
-                  className="p-2 rounded-lg flex-shrink-0"
+                  className="p-3 rounded-lg flex-shrink-0"
                   style={{
                     background: `${getStatusColor(record.status)}20`,
                     color: getStatusColor(record.status)
@@ -461,12 +338,12 @@ function RecordsView({ records, use12h }: { records: AttendanceRecord[]; use12h:
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                       {getTypeLabel(record.type)}
                     </span>
                     <span
-                      className="text-xs px-2 py-0.5 rounded"
+                      className="text-xs px-3 py-1 rounded-full font-medium"
                       style={{
                         background: `${getStatusColor(record.status)}20`,
                         color: getStatusColor(record.status)
@@ -476,21 +353,21 @@ function RecordsView({ records, use12h }: { records: AttendanceRecord[]; use12h:
                     </span>
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-                    <span className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <span className={`flex items-center gap-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                       <Clock size={14} />
                       {formatTime(record.timestamp, use12h)}
                     </span>
                     
                     {record.markedBy && (
-                      <span className="text-xs">
+                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                         Marcado por: {record.markedBy}
                       </span>
                     )}
                   </div>
                   
                   {record.notes && (
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                    <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                       {record.notes}
                     </p>
                   )}
@@ -500,6 +377,89 @@ function RecordsView({ records, use12h }: { records: AttendanceRecord[]; use12h:
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Memorandums Panel
+function MemorandumsPanel({ memos, theme }: { memos: Memorandum[]; theme: 'light' | 'dark' }) {
+  return (
+    <div className="mt-8">
+      <div className={`p-4 rounded-lg mb-4 border ${
+        theme === 'dark' 
+          ? 'bg-blue-900/20 border-blue-800 text-blue-300' 
+          : 'bg-blue-50 border-blue-200 text-blue-800'
+      }`}>
+        <p className="text-sm">
+          <strong>Nota:</strong> Los memorandos se generan automáticamente cuando el sistema detecta anomalías de asistencia (ausencias, llegadas tarde, salidas anticipadas u omitidas).
+        </p>
+      </div>
+
+      <div className={`rounded-lg border ${
+        theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+      }`}>
+        <div className={`p-4 border-b ${
+          theme === 'dark' 
+            ? 'border-gray-700 bg-gray-800/50' 
+            : 'border-gray-200 bg-gray-50/50'
+        }`}>
+          <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            Memorandos en el período
+          </h4>
+        </div>
+        {memos.length === 0 ? (
+          <div className={`p-6 text-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className="text-sm">No hay memorandos registrados en el período seleccionado.</p>
+          </div>
+        ) : (
+          <div className={`divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
+            {memos.map((m) => (
+              <div key={m._id} className="p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-3 mb-3">
+                    <span className={`font-mono text-sm font-semibold ${
+                      theme === 'dark' ? 'text-blue-400' : 'text-blue-700'
+                    }`}>
+                      {(m as any).memorandumCode || (m as any).code}
+                    </span>
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 text-gray-300' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {getMemorandumTypeLabel(m.type)}
+                    </span>
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 text-gray-300' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {getMemorandumStatusLabel(m.status)}
+                    </span>
+                  </div>
+                  <div className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <strong>Incidencia:</strong> {new Date(m.incidentDate).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                  {m.employeeJustification && (
+                    <div className={`p-3 rounded-lg border ${
+                      theme === 'dark' 
+                        ? 'bg-gray-800/50 border-gray-700' 
+                        : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <span className={`font-medium ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>
+                          Justificación:
+                        </span>{' '}
+                        {m.employeeJustification}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

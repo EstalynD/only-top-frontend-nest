@@ -21,8 +21,16 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import Loader from '@/components/ui/Loader';
 import { useTheme } from '@/lib/theme';
-import { getContratosByEmpleado, getEstadisticasContratos } from '@/lib/service-rrhh/contratos-api';
+import { 
+  getContratosByEmpleado, 
+  getEstadisticasContratos,
+  generarContratoLaboral,
+  getInfoContratoLaboral,
+  validarPlantillaContrato,
+  generarPdfContrato
+} from '@/lib/service-rrhh/contratos-api';
 import type { Contrato, ContratosStats } from '@/lib/service-rrhh/contratos-types';
+import type { ContratoLaboralInfo, PlantillaValidation } from '@/lib/service-rrhh/types';
 import CrearDocumentoModal from '@/components/rrhh/CrearDocumentoModal';
 
 interface Props {
@@ -39,18 +47,74 @@ export default function ContratosTab({ empleadoId, token }: Props) {
   const [error, setError] = React.useState<string | null>(null);
   const [filtroEstado, setFiltroEstado] = React.useState<string>('');
   const [openCrearDocumento, setOpenCrearDocumento] = React.useState(false);
+  
+  // Estados para plantillas de contratos
+  const [plantillaValidation, setPlantillaValidation] = React.useState<PlantillaValidation | null>(null);
+  const [contratoLaboralInfo, setContratoLaboralInfo] = React.useState<ContratoLaboralInfo | null>(null);
+  const [loadingPlantilla, setLoadingPlantilla] = React.useState(false);
+  const [generandoContrato, setGenerandoContrato] = React.useState(false);
 
   React.useEffect(() => {
     loadContratos();
-    loadEstadisticas();
+    loadPlantillaValidation();
   }, [empleadoId, token]);
+
+  const calcularEstadisticas = (contratos: Contrato[]) => {
+    const estadisticas = {
+      total: contratos.length,
+      porEstado: {} as Record<string, number>,
+      porTipo: {} as Record<string, number>,
+      proximosAVencer: 0,
+      vencidos: 0
+    };
+
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() + 30);
+
+  contratos.forEach(contrato => {
+      // Contar por estado
+      estadisticas.porEstado[contrato.estado] = (estadisticas.porEstado[contrato.estado] || 0) + 1;
+      
+      // Contar por tipo
+      estadisticas.porTipo[contrato.tipoContrato] = (estadisticas.porTipo[contrato.tipoContrato] || 0) + 1;
+      
+      // Contar próximos a vencer
+      if (contrato.fechaFin) {
+        const fin = new Date(contrato.fechaFin);
+        if (fin <= fechaLimite && fin > new Date()) {
+          estadisticas.proximosAVencer++;
+        }
+      }
+      
+      // Contar vencidos
+      if (contrato.fechaFin) {
+        const fin = new Date(contrato.fechaFin);
+        if (fin < new Date()) {
+          estadisticas.vencidos++;
+        }
+      }
+    });
+
+    return estadisticas;
+  };
 
   const loadContratos = async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getContratosByEmpleado(empleadoId, token);
-      setContratos(response.data);
+      console.log('📋 Response from getContratosByEmpleado:', response);
+      console.log('📋 Response type:', typeof response);
+      console.log('📋 Is array:', Array.isArray(response));
+      // requestJSON já desenrola a resposta, então response já é o array
+      const contratosArray = Array.isArray(response) ? response : [];
+      setContratos(contratosArray);
+      console.log('📋 Contratos set to:', contratosArray);
+      
+      // Calcular estadísticas basándose en los contratos del empleado
+      const estadisticasCalculadas = calcularEstadisticas(contratosArray);
+      setEstadisticas(estadisticasCalculadas);
+      console.log('📊 Estadísticas calculadas:', estadisticasCalculadas);
     } catch (err: any) {
       console.error('Error loading contratos:', err);
       // Si el endpoint no existe, usar datos mock para desarrollo
@@ -60,6 +124,7 @@ export default function ContratosTab({ empleadoId, token }: Props) {
         setError(null);
       } else {
         setError(err.message || 'No se pudieron cargar los contratos');
+        setContratos([]); // Asegurar que siempre sea un array
         toast({
           type: 'error',
           title: 'Error al cargar contratos',
@@ -71,23 +136,64 @@ export default function ContratosTab({ empleadoId, token }: Props) {
     }
   };
 
-  const loadEstadisticas = async () => {
+  const loadPlantillaValidation = async () => {
     try {
-      const response = await getEstadisticasContratos(token);
-      setEstadisticas(response.data);
+      setLoadingPlantilla(true);
+      const response = await validarPlantillaContrato(empleadoId, token);
+      setPlantillaValidation(response.data);
     } catch (err: any) {
-      console.error('Error loading estadísticas:', err);
-      // Si el endpoint no existe, usar datos mock para desarrollo
+      console.error('Error loading plantilla validation:', err);
       if (err.status === 404) {
-        console.log('Endpoint de estadísticas no implementado, usando datos mock');
-        setEstadisticas({
-          total: 0,
-          porEstado: {},
-          porTipo: {},
-          proximosAVencer: 0,
-          vencidos: 0
-        });
+        console.log('Endpoint de validación de plantilla no implementado');
+        setPlantillaValidation({ tienePlantilla: false });
+      } else {
+        setPlantillaValidation({ tienePlantilla: false });
       }
+    } finally {
+      setLoadingPlantilla(false);
+    }
+  };
+
+  const handleGenerarContratoLaboral = async () => {
+    try {
+      setGenerandoContrato(true);
+      
+      // Primero obtener la información del contrato
+      const infoResponse = await getInfoContratoLaboral(empleadoId, token);
+      setContratoLaboralInfo(infoResponse.data);
+      
+      // Luego generar el PDF
+      const pdfResponse = await generarContratoLaboral(empleadoId, token);
+      
+      // Crear blob y descargar
+      const blob = new Blob([new Uint8Array(pdfResponse.data)], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contrato-laboral-${infoResponse.data.contractNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        type: 'success',
+        title: 'Contrato generado',
+        description: 'El contrato laboral se ha generado y descargado correctamente.',
+      });
+      
+      // Recargar contratos para mostrar el nuevo
+      loadContratos();
+      
+    } catch (err: any) {
+      console.error('Error generating contract:', err);
+      toast({
+        type: 'error',
+        title: 'Error al generar contrato',
+        description: err.message || 'No se pudo generar el contrato laboral.',
+      });
+    } finally {
+      setGenerandoContrato(false);
     }
   };
 
@@ -99,6 +205,67 @@ export default function ContratosTab({ empleadoId, token }: Props) {
       description: 'El documento se subió correctamente.'
     });
     // Si deseas refrescar otra pestaña/lista de documentos, aquí podrías emitir un evento o levantar estado al padre.
+  };
+
+  const abrirPdfEnNuevaPestana = (base64: string, filename: string) => {
+    try {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      // Abrir en nueva pestaña
+      window.open(url, '_blank');
+      // Programar descarga opcional con filename si se desea
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      // No hacer click automático aquí para solo "ver"; la acción de descargar hará click
+      // Limpieza
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      }, 60_000);
+    } catch (e) {
+      console.error('Error abriendo PDF:', e);
+      toast({ type: 'error', title: 'Error', description: 'No se pudo abrir el PDF.' });
+    }
+  };
+
+  const handleVerContrato = async (contratoId: string) => {
+    try {
+      const pdf = await generarPdfContrato(contratoId, token);
+      abrirPdfEnNuevaPestana(pdf.pdfBuffer, pdf.filename || `contrato-${contratoId}.pdf`);
+    } catch (err: any) {
+      console.error('Error al ver contrato:', err);
+      toast({ type: 'error', title: 'Error', description: 'No se pudo generar el PDF del contrato.' });
+    }
+  };
+
+  const handleDescargarContrato = async (contratoId: string) => {
+    try {
+      const pdf = await generarPdfContrato(contratoId, token);
+      const byteCharacters = atob(pdf.pdfBuffer);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: pdf.mimeType || 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = pdf.filename || `contrato-${contratoId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast({ type: 'success', title: 'Descarga iniciada', description: 'El contrato se está descargando.' });
+    } catch (err: any) {
+      console.error('Error al descargar contrato:', err);
+      toast({ type: 'error', title: 'Error', description: 'No se pudo descargar el contrato.' });
+    }
   };
 
   const getEstadoIcon = (estado: string) => {
@@ -143,9 +310,12 @@ export default function ContratosTab({ empleadoId, token }: Props) {
     return tipo.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  // Asegurar que contratos siempre sea un array
+  const contratosSeguros = Array.isArray(contratos) ? contratos : [];
+  
   const contratosFiltrados = filtroEstado 
-    ? contratos.filter(contrato => contrato.estado === filtroEstado)
-    : contratos;
+    ? contratosSeguros.filter(contrato => contrato.estado === filtroEstado)
+    : contratosSeguros;
 
   if (loading) {
     return (
@@ -204,7 +374,7 @@ export default function ContratosTab({ empleadoId, token }: Props) {
           <p className={`text-sm ${
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}>
-            {contratos.length} contrato{contratos.length !== 1 ? 's' : ''} registrado{contratos.length !== 1 ? 's' : ''}
+            {contratosSeguros.length} contrato{contratosSeguros.length !== 1 ? 's' : ''} registrado{contratosSeguros.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
@@ -222,6 +392,27 @@ export default function ContratosTab({ empleadoId, token }: Props) {
             <span className="hidden sm:inline">Subir Documento</span>
             <span className="sm:hidden">Subir</span>
           </Button>
+          {plantillaValidation?.tienePlantilla && (
+            <Button 
+              type="button" 
+              variant="primary" 
+              className="px-3 py-2 text-sm w-full sm:w-auto"
+              onClick={handleGenerarContratoLaboral}
+              disabled={generandoContrato}
+            >
+              {generandoContrato ? (
+                <Loader size="sm" variant="primary" />
+              ) : (
+                <FileText size={16} />
+              )}
+              <span className="hidden sm:inline">
+                {generandoContrato ? 'Generando...' : 'Generar Contrato'}
+              </span>
+              <span className="sm:hidden">
+                {generandoContrato ? 'Generando...' : 'Generar'}
+              </span>
+            </Button>
+          )}
           <Button type="button" variant="primary" className="px-3 py-2 text-sm w-full sm:w-auto">
             <Plus size={16} />
             <span className="hidden sm:inline">Nuevo Contrato</span>
@@ -324,6 +515,64 @@ export default function ContratosTab({ empleadoId, token }: Props) {
         </div>
       )}
 
+      {/* Información de Plantilla de Contrato */}
+      {plantillaValidation && (
+        <div className={`rounded-lg border p-4 ${
+          theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <FileText size={20} className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <h4 className={`text-sm font-semibold ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
+                Plantilla de Contrato Disponible
+              </h4>
+              {plantillaValidation.tienePlantilla ? (
+                <div className="mt-1">
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    <strong>Plantilla:</strong> {plantillaValidation.templateName}
+                  </p>
+                  <p className={`text-xs ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    Área: {plantillaValidation.areaCode} | Cargo: {plantillaValidation.cargoCode}
+                  </p>
+                </div>
+              ) : (
+                <p className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  No hay plantilla de contrato configurada para este empleado.
+                </p>
+              )}
+            </div>
+            {plantillaValidation.tienePlantilla && (
+              <Button 
+                type="button" 
+                variant="primary" 
+                size="sm"
+                onClick={handleGenerarContratoLaboral}
+                disabled={generandoContrato}
+              >
+                {generandoContrato ? (
+                  <Loader size="sm" variant="primary" />
+                ) : (
+                  <FileText size={16} />
+                )}
+                <span className="ml-2">
+                  {generandoContrato ? 'Generando...' : 'Generar'}
+                </span>
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
@@ -372,6 +621,27 @@ export default function ContratosTab({ empleadoId, token }: Props) {
             }
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {plantillaValidation?.tienePlantilla && (
+              <Button 
+                type="button" 
+                variant="primary" 
+                className="px-3 py-2 text-sm"
+                onClick={handleGenerarContratoLaboral}
+                disabled={generandoContrato}
+              >
+                {generandoContrato ? (
+                  <Loader size="sm" variant="primary" />
+                ) : (
+                  <FileText size={16} />
+                )}
+                <span className="hidden sm:inline ml-2">
+                  {generandoContrato ? 'Generando...' : 'Generar Contrato Laboral'}
+                </span>
+                <span className="sm:hidden ml-2">
+                  {generandoContrato ? 'Generando...' : 'Generar'}
+                </span>
+              </Button>
+            )}
             <Button type="button" variant="primary" className="px-3 py-2 text-sm">
               <Plus size={16} />
               <span className="hidden sm:inline">Crear Primer Contrato</span>
@@ -469,14 +739,27 @@ export default function ContratosTab({ empleadoId, token }: Props) {
                       </p>
                     </div>
                   )}
+
+                  {contrato.aprobacion?.comentarios?.includes('generado automáticamente') && (
+                    <div className="mb-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                        theme === 'dark' 
+                          ? 'bg-blue-900/30 text-blue-400' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        <FileText size={10} />
+                        Creado automáticamente desde documento
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:ml-4">
-                  <Button type="button" variant="secondary" className="px-3 py-2 text-sm">
+                  <Button type="button" variant="secondary" className="px-3 py-2 text-sm" onClick={() => handleVerContrato(contrato._id)}>
                     <Eye size={16} />
                     <span className="hidden sm:inline ml-1">Ver</span>
                   </Button>
-                  <Button type="button" variant="secondary" className="px-3 py-2 text-sm">
+                  <Button type="button" variant="secondary" className="px-3 py-2 text-sm" onClick={() => handleDescargarContrato(contrato._id)}>
                     <Download size={16} />
                     <span className="hidden sm:inline ml-1">Descargar</span>
                   </Button>

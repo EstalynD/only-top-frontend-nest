@@ -78,7 +78,7 @@ export default function ConsolidarMesModal({
       onClose={onClose}
       title="Consolidar Costos del Mes"
       icon={headerIcon}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <div className="p-6 space-y-6">
         {/* Advertencia */}

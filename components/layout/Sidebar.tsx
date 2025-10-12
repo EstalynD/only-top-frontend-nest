@@ -25,6 +25,10 @@ import {
   TrendingUp,
   Target,
   MessageCircle,
+  Package,
+  Lock,
+  Power,
+  Component,
 } from "lucide-react";
 
 /** =========================
@@ -36,7 +40,7 @@ type SidebarProps = {
   onClose?: () => void;
 };
 
-type BasePerm = "system.admin" | "rrhh:areas:read" | "clientes:modelos:read" | "ventas:modelos:read" | "ventas:recruitment:read" | "ventas:chatting:read" | "ventas:chatting:goals:read" | "ventas:chatting:commissions:read" | "ventas:traffic:campaigns:read" | "ventas:traffic:campaigns:create" | "ventas:traffic:campaigns:update" | "ventas:traffic:campaigns:delete" | "finanzas:read" | "finanzas:calculate" | "finanzas:approve" | "finanzas:admin" | "cartera:facturas:read" | "cartera:pagos:read" | "cartera:read";
+type BasePerm = "system.admin" | "rrhh:areas:read" | "rrhh:endowment:read" | "clientes:modelos:read" | "ventas:modelos:read" | "ventas:recruitment:read" | "ventas:chatting:read" | "ventas:chatting:goals:read" | "ventas:chatting:commissions:read" | "ventas:traffic:campaigns:read" | "ventas:traffic:campaigns:create" | "ventas:traffic:campaigns:update" | "ventas:traffic:campaigns:delete" | "finanzas:read" | "finanzas:calculate" | "finanzas:approve" | "finanzas:admin" | "cartera:facturas:read" | "cartera:pagos:read" | "cartera:read";
 
 type NavItem = {
   type: "item";
@@ -78,6 +82,15 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     icon: <LayoutDashboard size={18} />,
     badge: "Nuevo",
     badgeColor: "#10b981",
+  },
+  {
+    type: "item",
+    id: "mi-asistencia",
+    href: "/mi-asistencia",
+    label: "Mi Asistencia",
+    icon: <Clock size={18} />,
+    badge: "NEW",
+    badgeColor: "#3b82f6",
   },
 
 
@@ -140,6 +153,14 @@ const RRHH_GROUP: NavGroup = {
       href: "/rrhh/attendance",
       label: "Control de Asistencia",
       icon: <Clock size={16} />,
+    },
+    {
+      type: "item",
+      id: "rrhh-endowment",
+      href: "/rrhh/endowment",
+      label: "Dotación",
+      icon: <Package size={16} />,
+      requiresPermission: "rrhh:endowment:read",
     },
   ],
 };
@@ -366,6 +387,50 @@ const CONFIG_GROUP: NavGroup = {
   ],
 };
 
+const COMPONENTS_GROUP: NavGroup = {
+  id: "componentes",
+  label: "Componentes",
+  icon: <Component size={18} />,
+  children: [
+    {
+      type: "item",
+      id: "components-buttons",
+      href: "/componentes/buttons",
+      label: "Buttons",
+      icon: <Component size={16} />,
+      badge: "NEW",
+      badgeColor: "#10b981",
+    },
+    {
+      type: "item",
+      id: "components-modals",
+      href: "/componentes/modals",
+      label: "Modals",
+      icon: <Component size={16} />,
+      badge: "NEW",
+      badgeColor: "#3b82f6",
+    },
+    {
+      type: "item",
+      id: "components-loaders",
+      href: "/componentes/loaders",
+      label: "Loaders",
+      icon: <Component size={16} />,
+      badge: "NEW",
+      badgeColor: "#8b5cf6",
+    },
+    {
+      type: "item",
+      id: "components-forms",
+      href: "/componentes/forms",
+      label: "Forms",
+      icon: <Component size={16} />,
+      badge: "NEW",
+      badgeColor: "#10b981",
+    },
+  ],
+};
+
 const BOTTOM_NAV_ITEMS: NavItem[] = [
   {
     type: "item",
@@ -423,9 +488,9 @@ function NavLinkItem({
   const disabled = item.disabled;
   const Comp: any = disabled ? "div" : Link;
 
-  // Estilos por nivel - diseño minimalista
+  // Estilos por nivel
   const paddingLeft = level === 0 ? "pl-3" : level === 1 ? "pl-6" : "pl-9";
-  const textSize = level === 0 ? "text-sm" : "text-sm";
+  const textSize = "text-sm";
   const iconSize = level === 0 ? 18 : 16;
 
   return (
@@ -435,26 +500,13 @@ function NavLinkItem({
       aria-disabled={disabled || undefined}
       title={disabled ? "Próximamente disponible" : undefined}
       className={`
-        group relative flex items-center gap-3 ${paddingLeft} pr-3 py-2 
+        group relative flex items-center gap-3 ${paddingLeft} pr-3 py-2.5 
         rounded-lg ${textSize} font-medium transition-all duration-150
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-        ${!disabled && !isActive ? "ot-theme-text hover:ot-hover-surface" : ""}
-        ${isActive ? "font-semibold" : ""}
+        ${!disabled && !isActive ? "text-primary hover-surface" : ""}
+        ${isActive ? "font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : ""}
       `}
-      style={{
-        background: isActive ? 'var(--surface-muted)' : 'transparent',
-        color: isActive ? 'var(--ot-blue-500)' : undefined
-      }}
     >
-      {/* Indicador de activo */}
-      {isActive && (
-        <span 
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full"
-          style={{ background: 'var(--ot-blue-500)' }}
-          aria-hidden="true"
-        />
-      )}
-
       {/* Icono */}
       <span className="shrink-0">
         {React.cloneElement(item.icon as React.ReactElement, { 
@@ -470,26 +522,14 @@ function NavLinkItem({
 
       {/* Badge */}
       {item.badge && !disabled && (
-        <span 
-          className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
-          style={{ 
-            background: 'var(--ot-blue-50)',
-            color: 'var(--ot-blue-500)'
-          }}
-        >
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
           {item.badge}
         </span>
       )}
 
       {/* Disabled badge */}
       {disabled && (
-        <span 
-          className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-          style={{ 
-            background: 'var(--surface-muted)',
-            color: 'var(--text-muted)'
-          }}
-        >
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
           Pronto
         </span>
       )}
@@ -522,11 +562,11 @@ function Collapsible({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={ariaId}
-        className="group w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 ot-theme-text hover:ot-hover-surface"
-        style={{
-          background: highlight ? 'var(--surface-muted)' : 'transparent',
-          color: highlight ? 'var(--ot-blue-500)' : undefined
-        }}
+        className={`group w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 ${
+          highlight 
+            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" 
+            : "text-primary hover-surface"
+        }`}
       >
         <span className="flex items-center gap-3">
           <span className="shrink-0">
@@ -634,11 +674,11 @@ function SectionComponent({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={`sec-${section.id}`}
-        className={`group w-full flex items-center justify-between ${paddingLeft} pr-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all duration-150 ot-theme-text-muted hover:ot-hover-surface`}
-        style={{
-          background: anyActive ? 'var(--surface-muted)' : 'transparent',
-          color: anyActive ? 'var(--ot-blue-500)' : undefined
-        }}
+        className={`group w-full flex items-center justify-between ${paddingLeft} pr-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all duration-150 ${
+          anyActive 
+            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" 
+            : "text-muted hover-surface"
+        }`}
       >
         <span>{section.label}</span>
         <ChevronDown
@@ -682,12 +722,14 @@ export function Sidebar({ variant = "desktop", open = false, onClose }: SidebarP
   const router = useRouter();
 
   const [perms, setPerms] = React.useState<Set<string>>(new Set());
+  const [userProfile, setUserProfile] = React.useState<any>(null);
   const [systemOpen, setSystemOpen] = React.useState(false);
   const [rrhhOpen, setRrhhOpen] = React.useState(false);
   const [clientesOpen, setClientesOpen] = React.useState(false);
   const [finanzasOpen, setFinanzasOpen] = React.useState(false);
   const [ventasOpen, setVentasOpen] = React.useState(false);
   const [configOpen, setConfigOpen] = React.useState(false);
+  const [componentsOpen, setComponentsOpen] = React.useState(false);
 
   const Container: any = variant === "mobile" ? "div" : "aside";
   const mobileStyles =
@@ -712,20 +754,29 @@ export function Sidebar({ variant = "desktop", open = false, onClose }: SidebarP
     router.replace("/login");
   }, [router, setToken]);
 
-  // Cargar permisos del usuario
+  // Cargar permisos del usuario y perfil
   React.useEffect(() => {
     let cancelled = false;
     const load = async () => {
       if (!ready || !token) {
-        if (!cancelled) setPerms(new Set());
+        if (!cancelled) {
+          setPerms(new Set());
+          setUserProfile(null);
+        }
         return;
       }
       try {
         const me = await getProfile(token);
         const p = new Set<string>((me.user?.permissions ?? []) as string[]);
-        if (!cancelled) setPerms(p);
+        if (!cancelled) {
+          setPerms(p);
+          setUserProfile(me.user);
+        }
       } catch {
-        if (!cancelled) setPerms(new Set());
+        if (!cancelled) {
+          setPerms(new Set());
+          setUserProfile(null);
+        }
       }
     };
     load();
@@ -790,6 +841,9 @@ export function Sidebar({ variant = "desktop", open = false, onClose }: SidebarP
 
     const configActive = CONFIG_GROUP.children.some((c) => c.type === "item" && isActive(c.href));
     if (configActive) setConfigOpen(true);
+
+    const componentsActive = COMPONENTS_GROUP.children.some((c) => c.type === "item" && isActive(c.href));
+    if (componentsActive) setComponentsOpen(true);
   }, [pathname, systemFiltered, rrhhFiltered, clientesFiltered, finanzasFiltered, ventasFiltered, isActive]);
 
   const handleNavClick = (item: NavItem, e: React.MouseEvent) => {
@@ -818,185 +872,173 @@ export function Sidebar({ variant = "desktop", open = false, onClose }: SidebarP
         />
       )}
 
-      <Container
-        className={`w-72 flex flex-col ot-theme-surface ${
-          variant === "desktop" 
-            ? "border-r ot-theme-border sticky top-16 h-[calc(100dvh-4rem)]" 
-            : ""
-        }`}
-        style={mobileStyles}
-        aria-label="Sidebar navigation"
-      >
-        {/* Header - solo mobile */}
-        {variant === "mobile" && (
-          <div className="h-16 flex items-center justify-between px-4 border-b ot-theme-border">
+      <nav className={`pc-sidebar sidebar-width flex flex-col bg-surface border-r border-border ${
+        variant === "desktop" 
+          ? "sticky top-16 h-[calc(100dvh-4rem)]" 
+          : ""
+      }`} style={mobileStyles}>
+        <div className="navbar-wrapper flex flex-col h-full">
+          {/* Header - Solo botón de cerrar en móvil */}
+          {variant === "mobile" && (
+            <div className="m-header flex items-center justify-end py-4 px-6 h-16 border-b border-border">
+              <button
+                onClick={onClose}
+                aria-label="Cerrar menú"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border text-muted hover-surface transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          )}
+
+          <div className="navbar-content flex-1 py-4 overflow-y-auto">
+            {/* Navigation */}
+            <ul className="pc-navbar px-3 space-y-1">
+              {/* Principal */}
+              {MAIN_NAV_ITEMS.length > 0 && (
+                <>
+                  {MAIN_NAV_ITEMS.map((item) => (
+                    <li key={item.id}>
+                      <NavLinkItem
+                        item={item}
+                        isActive={isActive(item.href)}
+                        onClick={(e) => handleNavClick(item, e)}
+                        level={0}
+                      />
+                    </li>
+                  ))}
+                </>
+              )}
+
+              {/* Administración */}
+              {systemFiltered && (
+                <li>
+                  <NavGroupComponent
+                    group={systemFiltered}
+                    isOpen={systemOpen}
+                    onToggle={() => setSystemOpen((v) => !v)}
+                    onItemClick={handleNavClick}
+                    hasAnyChildActive={groupHasActive(systemFiltered)}
+                  />
+                </li>
+              )}
+
+              {/* RRHH */}
+              {rrhhFiltered && (
+                <li>
+                  <NavGroupComponent
+                    group={rrhhFiltered}
+                    isOpen={rrhhOpen}
+                    onToggle={() => setRrhhOpen((v) => !v)}
+                    onItemClick={handleNavClick}
+                    hasAnyChildActive={groupHasActive(rrhhFiltered)}
+                  />
+                </li>
+              )}
+
+              {/* Clientes */}
+              {clientesFiltered && (
+                <li>
+                  <NavGroupComponent
+                    group={clientesFiltered}
+                    isOpen={clientesOpen}
+                    onToggle={() => setClientesOpen((v) => !v)}
+                    onItemClick={handleNavClick}
+                    hasAnyChildActive={groupHasActive(clientesFiltered)}
+                  />
+                </li>
+              )}
+
+              {/* Finanzas */}
+              {finanzasFiltered && (
+                <li>
+                  <NavGroupComponent
+                    group={finanzasFiltered}
+                    isOpen={finanzasOpen}
+                    onToggle={() => setFinanzasOpen((v) => !v)}
+                    onItemClick={handleNavClick}
+                    hasAnyChildActive={groupHasActive(finanzasFiltered)}
+                  />
+                </li>
+              )}
+
+              {/* Ventas */}
+              {ventasFiltered && (
+                <li>
+                  <NavGroupComponent
+                    group={ventasFiltered}
+                    isOpen={ventasOpen}
+                    onToggle={() => setVentasOpen((v) => !v)}
+                    onItemClick={handleNavClick}
+                    hasAnyChildActive={groupHasActive(ventasFiltered)}
+                  />
+                </li>
+              )}
+
+              {/* Configuración */}
+              <li>
+                <NavGroupComponent
+                  group={CONFIG_GROUP}
+                  isOpen={configOpen}
+                  onToggle={() => setConfigOpen((v) => !v)}
+                  onItemClick={handleNavClick}
+                  hasAnyChildActive={groupHasActive(CONFIG_GROUP)}
+                />
+              </li>
+
+              {/* Componentes */}
+              <li>
+                <NavGroupComponent
+                  group={COMPONENTS_GROUP}
+                  isOpen={componentsOpen}
+                  onToggle={() => setComponentsOpen((v) => !v)}
+                  onItemClick={handleNavClick}
+                  hasAnyChildActive={groupHasActive(COMPONENTS_GROUP)}
+                />
+              </li>
+
+              {/* Personal */}
+              {BOTTOM_NAV_ITEMS.map((item) => (
+                <li key={item.id}>
+                  <NavLinkItem
+                    item={item}
+                    isActive={isActive(item.href)}
+                    onClick={(e) => handleNavClick(item, e)}
+                    level={0}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* User Info - Fixed at bottom */}
+          <div className="border-t border-border p-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--ot-blue-500)' }}>
-                <span className="text-white font-bold text-sm">OT</span>
-              </div>
-              <div>
-                <h2 className="text-sm font-bold ot-theme-text">
-                  OnlyTop
-                </h2>
-                <p className="text-xs ot-theme-text-muted">
-                  Panel de control
+              <img 
+                className="shrink-0 w-10 h-10 rounded-full border-2 border-border" 
+                src={userProfile?.avatarUrl || "/api/placeholder/40/40"} 
+                alt="user-image" 
+              />
+              <div className="min-w-0 flex-1">
+                <h6 className="text-sm font-semibold text-primary truncate">
+                  {userProfile?.displayName || userProfile?.username || "Usuario"}
+                </h6>
+                <p className="text-xs text-muted truncate">
+                  {userProfile?.roles?.[0] || "Usuario"}
                 </p>
               </div>
+              <button 
+                onClick={logout}
+                className="shrink-0 p-2 rounded-lg hover-surface transition-colors"
+                title="Cerrar sesión"
+              >
+                <Power size={16} className="text-muted hover:text-red-500 transition-colors" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Cerrar menú"
-              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border ot-theme-border ot-theme-text-muted hover:ot-hover-surface transition-colors"
-            >
-              <X size={18} />
-            </button>
           </div>
-        )}
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto overflow-x-hidden sidebar-scroll">
-          {/* Principal */}
-          {MAIN_NAV_ITEMS.length > 0 && (
-            <div className="space-y-1">
-              {MAIN_NAV_ITEMS.map((item) => (
-                <NavLinkItem
-                  key={item.id}
-                  item={item}
-                  isActive={isActive(item.href)}
-                  onClick={(e) => handleNavClick(item, e)}
-                  level={0}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Divider */}
-          {MAIN_NAV_ITEMS.length > 0 && <div className="border-t ot-theme-border" />}
-
-          {/* Administración */}
-          {systemFiltered && (
-            <NavGroupComponent
-              group={systemFiltered}
-              isOpen={systemOpen}
-              onToggle={() => setSystemOpen((v) => !v)}
-              onItemClick={handleNavClick}
-              hasAnyChildActive={groupHasActive(systemFiltered)}
-            />
-          )}
-
-          {/* RRHH */}
-          {rrhhFiltered && (
-            <NavGroupComponent
-              group={rrhhFiltered}
-              isOpen={rrhhOpen}
-              onToggle={() => setRrhhOpen((v) => !v)}
-              onItemClick={handleNavClick}
-              hasAnyChildActive={groupHasActive(rrhhFiltered)}
-            />
-          )}
-
-          {/* Clientes */}
-          {clientesFiltered && (
-            <NavGroupComponent
-              group={clientesFiltered}
-              isOpen={clientesOpen}
-              onToggle={() => setClientesOpen((v) => !v)}
-              onItemClick={handleNavClick}
-              hasAnyChildActive={groupHasActive(clientesFiltered)}
-            />
-          )}
-
-          {/* Finanzas */}
-          {finanzasFiltered && (
-            <NavGroupComponent
-              group={finanzasFiltered}
-              isOpen={finanzasOpen}
-              onToggle={() => setFinanzasOpen((v) => !v)}
-              onItemClick={handleNavClick}
-              hasAnyChildActive={groupHasActive(finanzasFiltered)}
-            />
-          )}
-
-          {/* Ventas */}
-          {ventasFiltered && (
-            <NavGroupComponent
-              group={ventasFiltered}
-              isOpen={ventasOpen}
-              onToggle={() => setVentasOpen((v) => !v)}
-              onItemClick={handleNavClick}
-              hasAnyChildActive={groupHasActive(ventasFiltered)}
-            />
-          )}
-
-          {/* Configuración */}
-          <NavGroupComponent
-            group={CONFIG_GROUP}
-            isOpen={configOpen}
-            onToggle={() => setConfigOpen((v) => !v)}
-            onItemClick={handleNavClick}
-            hasAnyChildActive={groupHasActive(CONFIG_GROUP)}
-          />
-
-          {/* Divider */}
-          <div className="border-t ot-theme-border" />
-
-          {/* Personal */}
-          <div className="space-y-1">
-            {BOTTOM_NAV_ITEMS.map((item) => (
-              <NavLinkItem
-                key={item.id}
-                item={item}
-                isActive={isActive(item.href)}
-                onClick={(e) => handleNavClick(item, e)}
-                level={0}
-              />
-            ))}
-          </div>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t ot-theme-border ot-theme-surface">
-          {/* Logout button */}
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
-            style={{ 
-              color: '#ef4444',
-              '--hover-bg': 'rgba(239, 68, 68, 0.1)'
-            } as any}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            title="Cerrar sesión"
-          >
-            <LogOut size={18} strokeWidth={2} />
-            <span>Cerrar sesión</span>
-          </button>
-
-          {/* Version info */}
-          <div className="text-center mt-4 pt-4 border-t ot-theme-border">
-            <p className="text-xs ot-theme-text-muted">
-              © 2025 OnlyTop · v1.0.0
-            </p>
-          </div>
         </div>
-      </Container>
-
-      {/* Estilos para scrollbar */}
-      <style jsx global>{`
-        .sidebar-scroll::-webkit-scrollbar {
-          width: 6px;
-        }
-        .sidebar-scroll::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .sidebar-scroll::-webkit-scrollbar-thumb {
-          background: var(--border);
-          border-radius: 3px;
-        }
-        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-          background: var(--text-muted);
-        }
-      `}</style>
+      </nav>
     </>
   );
 }

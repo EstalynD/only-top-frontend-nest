@@ -3,6 +3,8 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { addToast } from '@/components/ui/Toast';
+import { Select, SelectField } from '@/components/ui/selectUI';
+import { Button } from '@/components/ui/Button';
 import { 
   createModelo, 
   updateModelo, 
@@ -33,6 +35,8 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
   const { token } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [uploadingPhoto, setUploadingPhoto] = React.useState(false);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   
   // Empleados disponibles
   const [salesClosers, setSalesClosers] = React.useState<EmpleadoBasico[]>([]);
@@ -97,8 +101,17 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
     loadEmpleados();
   }, [token]);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!token || !e.target.files || !e.target.files[0]) return;
+  // Cleanup preview URL on unmount
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
 
     const file = e.target.files[0];
     
@@ -112,28 +125,28 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
       return;
     }
 
-    setUploadingPhoto(true);
-    try {
-      const result = await uploadModeloPhoto(token, file);
-      setFormData(prev => ({
-        ...prev,
-        fotoPerfil: result.data.url,
-        fotoPerfilPublicId: result.data.publicId,
-      }));
-      addToast({
-        type: 'success',
-        title: 'Foto subida',
-        description: 'La foto se ha subido correctamente',
-      });
-    } catch (error: any) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
       addToast({
         type: 'error',
-        title: 'Error al subir foto',
-        description: error?.message || 'No se pudo subir la foto',
+        title: 'Tipo de archivo inválido',
+        description: 'Solo se permiten archivos de imagen',
       });
-    } finally {
-      setUploadingPhoto(false);
+      return;
     }
+
+    setSelectedFile(file);
+    
+    // Create preview URL
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+  };
+
+  const uploadPhotoToCloudinary = async (file: File): Promise<{ url: string; publicId: string }> => {
+    if (!token) throw new Error('No token available');
+    
+    const result = await uploadModeloPhoto(token, file);
+    return result.data;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,19 +184,43 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
 
     setLoading(true);
     try {
+      let finalFormData = { ...formData };
+
+      // Upload photo if a new one was selected
+      if (selectedFile) {
+        setUploadingPhoto(true);
+        try {
+          const photoResult = await uploadPhotoToCloudinary(selectedFile);
+          finalFormData = {
+            ...finalFormData,
+            fotoPerfil: photoResult.url,
+            fotoPerfilPublicId: photoResult.publicId,
+          };
+        } catch (photoError: any) {
+          addToast({
+            type: 'error',
+            title: 'Error al subir foto',
+            description: photoError?.message || 'No se pudo subir la foto',
+          });
+          return;
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
+
       if (isEdit && modelo) {
-        await updateModelo(token, modelo._id, formData as UpdateModeloDto);
+        await updateModelo(token, modelo._id, finalFormData as UpdateModeloDto);
         addToast({
           type: 'success',
           title: 'Modelo actualizada',
-          description: `${formData.nombreCompleto} ha sido actualizada correctamente`,
+          description: `${finalFormData.nombreCompleto} ha sido actualizada correctamente`,
         });
       } else {
-        await createModelo(token, formData);
+        await createModelo(token, finalFormData);
         addToast({
           type: 'success',
           title: 'Modelo creada',
-          description: `${formData.nombreCompleto} ha sido registrada correctamente`,
+          description: `${finalFormData.nombreCompleto} ha sido registrada correctamente`,
         });
       }
       router.push('/clientes/modelos');
@@ -329,24 +366,17 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Tipo de Documento *
-            </label>
-            <select
-              required
+            <SelectField
+              label="Tipo de Documento"
               value={formData.tipoDocumento}
-              onChange={(e) => setFormData(prev => ({ ...prev, tipoDocumento: e.target.value as any }))}
-              className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-              style={{
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              {TIPOS_DOCUMENTO.map(tipo => (
-                <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
-              ))}
-            </select>
+              onChange={(value) => setFormData(prev => ({ ...prev, tipoDocumento: value as any }))}
+              options={TIPOS_DOCUMENTO.map(tipo => ({
+                value: tipo.value,
+                label: tipo.label
+              }))}
+              placeholder="Seleccionar tipo de documento"
+              required
+            />
           </div>
 
           <div>
@@ -422,24 +452,18 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              País de Residencia *
-            </label>
-            <select
-              required
+            <SelectField
+              label="País de Residencia"
               value={formData.paisResidencia}
-              onChange={(e) => setFormData(prev => ({ ...prev, paisResidencia: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-              style={{
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              {PAISES_COMUNES.map(pais => (
-                <option key={pais} value={pais}>{pais}</option>
-              ))}
-            </select>
+              onChange={(value) => setFormData(prev => ({ ...prev, paisResidencia: value }))}
+              options={PAISES_COMUNES.map(pais => ({
+                value: pais,
+                label: pais
+              }))}
+              placeholder="Seleccionar país"
+              required
+              clearable
+            />
           </div>
 
           <div>
@@ -469,9 +493,9 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
         </h3>
         
         <div className="flex items-center gap-6">
-          {formData.fotoPerfil && (
+          {(previewUrl || formData.fotoPerfil) && (
             <img 
-              src={formData.fotoPerfil} 
+              src={previewUrl || formData.fotoPerfil} 
               alt="Foto de perfil" 
               className="w-24 h-24 rounded-full object-cover"
             />
@@ -486,11 +510,11 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
               }}
             >
               <Upload size={18} />
-              {uploadingPhoto ? 'Subiendo...' : 'Subir Foto'}
-              <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+              {uploadingPhoto ? 'Subiendo...' : selectedFile ? 'Cambiar Foto' : 'Subir Foto'}
+              <input type="file" className="hidden" accept="image/*" onChange={handlePhotoSelect} disabled={uploadingPhoto || loading} />
             </label>
             <p className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-              JPG, PNG o GIF. Máximo 5MB.
+              JPG, PNG o GIF. Máximo 5MB. {selectedFile && '(Se subirá al guardar)'}
             </p>
           </div>
         </div>
@@ -505,162 +529,108 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
         <div className="space-y-4">
           {/* Sales Closer */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Sales Closer Asignado *
-            </label>
-            <select
-              required
+            <SelectField
+              label="Sales Closer Asignado"
               value={formData.salesCloserAsignado}
-              onChange={(e) => setFormData(prev => ({ ...prev, salesCloserAsignado: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-              style={{
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              <option value="">Seleccionar Sales Closer</option>
-              {salesClosers.map(sc => (
-                <option key={sc._id} value={sc._id}>
-                  {sc.nombre} {sc.apellido} - {sc.correoElectronico}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFormData(prev => ({ ...prev, salesCloserAsignado: value }))}
+              options={salesClosers.map(sc => ({
+                value: sc._id,
+                label: `${sc.nombre} ${sc.apellido} - ${sc.correoElectronico}`
+              }))}
+              placeholder="Seleccionar Sales Closer"
+              required
+              clearable
+            />
           </div>
 
           {/* Trafficker */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-              Trafficker Asignado *
-            </label>
-            <select
-              required
+            <SelectField
+              label="Trafficker Asignado"
               value={formData.traffickerAsignado}
-              onChange={(e) => setFormData(prev => ({ ...prev, traffickerAsignado: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-              style={{
-                background: 'var(--background)',
-                borderColor: 'var(--border)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              <option value="">Seleccionar Trafficker</option>
-              {traffickers.map(tr => (
-                <option key={tr._id} value={tr._id}>
-                  {tr.nombre} {tr.apellido} - {tr.correoElectronico}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFormData(prev => ({ ...prev, traffickerAsignado: value }))}
+              options={traffickers.map(tr => ({
+                value: tr._id,
+                label: `${tr.nombre} ${tr.apellido} - ${tr.correoElectronico}`
+              }))}
+              placeholder="Seleccionar Trafficker"
+              required
+              clearable
+            />
           </div>
 
           {/* Equipo de Chatters */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Chatter Turno AM *
-              </label>
-              <select
-                required
+              <SelectField
+                label="Chatter Turno AM"
                 value={formData.equipoChatters.turnoAM}
-                onChange={(e) => setFormData(prev => ({ 
+                onChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  equipoChatters: { ...prev.equipoChatters, turnoAM: e.target.value }
+                  equipoChatters: { ...prev.equipoChatters, turnoAM: value }
                 }))}
-                className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                <option value="">Seleccionar Chatter</option>
-                {chatters.map(ch => (
-                  <option key={ch._id} value={ch._id}>
-                    {ch.nombre} {ch.apellido}
-                  </option>
-                ))}
-              </select>
+                options={chatters.map(ch => ({
+                  value: ch._id,
+                  label: `${ch.nombre} ${ch.apellido}`
+                }))}
+                placeholder="Seleccionar Chatter"
+                required
+                clearable
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Chatter Turno PM *
-              </label>
-              <select
-                required
+              <SelectField
+                label="Chatter Turno PM"
                 value={formData.equipoChatters.turnoPM}
-                onChange={(e) => setFormData(prev => ({ 
+                onChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  equipoChatters: { ...prev.equipoChatters, turnoPM: e.target.value }
+                  equipoChatters: { ...prev.equipoChatters, turnoPM: value }
                 }))}
-                className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                <option value="">Seleccionar Chatter</option>
-                {chatters.map(ch => (
-                  <option key={ch._id} value={ch._id}>
-                    {ch.nombre} {ch.apellido}
-                  </option>
-                ))}
-              </select>
+                options={chatters.map(ch => ({
+                  value: ch._id,
+                  label: `${ch.nombre} ${ch.apellido}`
+                }))}
+                placeholder="Seleccionar Chatter"
+                required
+                clearable
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Chatter Turno Madrugada *
-              </label>
-              <select
-                required
+              <SelectField
+                label="Chatter Turno Madrugada"
                 value={formData.equipoChatters.turnoMadrugada}
-                onChange={(e) => setFormData(prev => ({ 
+                onChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  equipoChatters: { ...prev.equipoChatters, turnoMadrugada: e.target.value }
+                  equipoChatters: { ...prev.equipoChatters, turnoMadrugada: value }
                 }))}
-                className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                <option value="">Seleccionar Chatter</option>
-                {chatters.map(ch => (
-                  <option key={ch._id} value={ch._id}>
-                    {ch.nombre} {ch.apellido}
-                  </option>
-                ))}
-              </select>
+                options={chatters.map(ch => ({
+                  value: ch._id,
+                  label: `${ch.nombre} ${ch.apellido}`
+                }))}
+                placeholder="Seleccionar Chatter"
+                required
+                clearable
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Chatter Supernumerario *
-              </label>
-              <select
-                required
+              <SelectField
+                label="Chatter Supernumerario"
                 value={formData.equipoChatters.supernumerario}
-                onChange={(e) => setFormData(prev => ({ 
+                onChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  equipoChatters: { ...prev.equipoChatters, supernumerario: e.target.value }
+                  equipoChatters: { ...prev.equipoChatters, supernumerario: value }
                 }))}
-                className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                <option value="">Seleccionar Supernumerario</option>
-                {supernumerarios.map(su => (
-                  <option key={su._id} value={su._id}>
-                    {su.nombre} {su.apellido}
-                  </option>
-                ))}
-              </select>
+                options={supernumerarios.map(su => ({
+                  value: su._id,
+                  label: `${su.nombre} ${su.apellido}`
+                }))}
+                placeholder="Seleccionar Supernumerario"
+                required
+                clearable
+              />
             </div>
           </div>
         </div>
@@ -710,23 +680,17 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
 
           {isEdit && (
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Estado
-              </label>
-              <select
-                value={formData.estado}
-                onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value as any }))}
-                className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all duration-200"
-                style={{
-                  background: 'var(--background)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {ESTADOS_MODELO.map(estado => (
-                  <option key={estado.value} value={estado.value}>{estado.label}</option>
-                ))}
-              </select>
+              <SelectField
+                label="Estado"
+                value={formData.estado || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, estado: value as any }))}
+                options={ESTADOS_MODELO.map(estado => ({
+                  value: estado.value,
+                  label: estado.label
+                }))}
+                placeholder="Seleccionar estado"
+                clearable
+              />
             </div>
           )}
 
@@ -752,31 +716,24 @@ export function ModeloForm({ modelo, isEdit = false }: ModeloFormProps) {
 
       {/* Form actions */}
       <div className="flex items-center justify-end gap-4">
-        <button
+        <Button
           type="button"
           onClick={() => router.back()}
-          className="px-6 py-2.5 rounded-lg font-medium transition-all duration-200"
-          style={{
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: 'var(--text-secondary)',
-          }}
+          variant="neutral"
+          size="lg"
         >
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           disabled={loading}
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm"
-          style={{
-            background: loading ? 'var(--surface-muted)' : 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))',
-            color: '#ffffff',
-            opacity: loading ? 0.6 : 1,
-          }}
+          variant="primary"
+          size="lg"
+          className="flex items-center gap-2"
         >
           <Save size={18} />
           {loading ? 'Guardando...' : isEdit ? 'Actualizar Modelo' : 'Crear Modelo'}
-        </button>
+        </Button>
       </div>
     </form>
   );

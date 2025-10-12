@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import Modal from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import type { Role } from '@/lib/service-rbac/types';
 import { Shield, Check, Search } from 'lucide-react';
 
@@ -55,7 +56,7 @@ export default function UserRolesModal({
       onClose={onClose}
       title={`Asignar roles${username ? ` a ${username}` : ''}`}
       icon={<Shield size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-xl"
+      maxWidth="xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         {/* Buscador */}
@@ -111,22 +112,22 @@ export default function UserRolesModal({
             Seleccionados: {selected.length}
           </p>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border"
-              style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+              variant="secondary"
+              size="md"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg text-white font-medium disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, var(--ot-blue-500), var(--ot-blue-700))' }}
+              variant="primary"
+              size="md"
             >
               Guardar
-            </button>
+            </Button>
           </div>
         </div>
       </form>

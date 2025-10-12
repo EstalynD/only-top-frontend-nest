@@ -3,6 +3,7 @@ import React from 'react';
 import { ModeloForm } from '@/components/clientes/ModeloForm';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
 
 export default function NuevoModeloPage() {
   const router = useRouter();
@@ -11,13 +12,13 @@ export default function NuevoModeloPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button
+        <Button
           onClick={() => router.back()}
-          className="p-2 rounded-lg transition-all duration-200"
-          style={{ border: '1px solid var(--border)' }}
-        >
-          <ArrowLeft size={20} style={{ color: 'var(--text-secondary)' }} />
-        </button>
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft size={20} />}
+          ariaLabel="Volver atrás"
+        />
         <div>
           <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
             Nueva Modelo

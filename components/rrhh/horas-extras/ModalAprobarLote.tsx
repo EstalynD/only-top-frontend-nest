@@ -104,7 +104,7 @@ export default function ModalAprobarLote({ isOpen, onClose, onSuccess, anio, mes
       onClose={handleClose}
       title={estado === 'APROBADO' ? 'Aprobar todos' : 'Rechazar en lote'}
       icon={estado === 'APROBADO' ? <CheckCircle size={22} style={{ color: 'var(--ot-green-500)' }} /> : <XCircle size={22} style={{ color: 'var(--ot-red-500)' }} />}
-      maxWidth="max-w-3xl"
+      maxWidth="3xl"
     >
       <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">

@@ -233,7 +233,7 @@ export default function GenerarNominaModal({
         onClose={onClose}
         title="Nómina Generada"
         icon={successIcon}
-        maxWidth="max-w-md"
+        maxWidth="md"
       >
         <div className="p-6">
           <div className="text-center">
@@ -248,24 +248,24 @@ export default function GenerarNominaModal({
               </div>
               <div className="flex justify-between py-2 border-b" style={{ borderColor: 'var(--border)' }}>
                 <span style={mutedTextStyle}>Empleados procesados:</span>
-                <span className="font-semibold" style={labelStyle}>{resultado.empleados?.length || 0}</span>
+                <span className="font-semibold" style={labelStyle}>{resultado.generados || 0}</span>
               </div>
               <div className="flex justify-between py-2">
                 <span style={mutedTextStyle}>Total nómina:</span>
                 <span className="font-bold text-lg" style={{ color: '#10b981' }}>
-                  {resultado.totalNominaUSD || '$ 0.00'}
+                  $ 0.00
                 </span>
               </div>
             </div>
 
-            {resultado.advertencias && resultado.advertencias.length > 0 && (
+            {resultado.errores && resultado.errores.length > 0 && (
               <div className="mt-4 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-left">
                 <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">
                   ⚠️ Advertencias:
                 </p>
                 <ul className="text-xs text-yellow-700 dark:text-yellow-400 list-disc list-inside">
-                  {resultado.advertencias.map((adv, idx) => (
-                    <li key={idx}>{adv}</li>
+                  {resultado.errores.map((error, idx) => (
+                    <li key={idx}>{error}</li>
                   ))}
                 </ul>
               </div>
@@ -282,7 +282,7 @@ export default function GenerarNominaModal({
       onClose={onClose}
       title={`Generar Nómina Quincenal - ${periodoLabel}`}
       icon={headerIcon}
-      maxWidth="max-w-5xl"
+      maxWidth="5xl"
     >
       <div className="p-6 space-y-6">
           {/* Error message */}

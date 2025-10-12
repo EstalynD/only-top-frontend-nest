@@ -5,8 +5,13 @@
 
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, Save, X, User, Calendar, AlertCircle } from 'lucide-react';
+import { Clock, Save, X, User, Calendar, AlertCircle, Building2, Hash, FileText, Settings } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import { useModal } from '@/lib/hooks/useModal';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
+import { useTheme } from '@/lib/theme';
+import { Select, SelectField } from '@/components/ui/selectUI';
 import FormularioDetalleHora from './FormularioDetalleHora';
 import ResumenCalculos from './ResumenCalculos';
 import Loader from '@/components/ui/Loader';
@@ -54,8 +59,39 @@ export default function ModalCrearEditarHorasExtras({
   registroId,
 }: ModalCrearEditarHorasExtrasProps) {
   
-  // ========== ESTADO ==========
+  // ========== HOOKS Y ESTADO ==========
+  const { toast } = useToast();
+  const { theme } = useTheme();
+  
+  // Usar el hook de modal mejorado
+  const modal = useModal({
+    preventBodyScroll: true,
+    closeOnEscape: true,
+    closeOnBackdropClick: false // No cerrar al hacer click en backdrop para formularios
+  });
+
+  // Helper styles for consistent styling
+  const inputStyle = {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    fontSize: '0.875rem',
+    borderRadius: '0.5rem',
+    border: '1px solid var(--border)',
+    background: 'var(--surface)',
+    color: 'var(--text-primary)',
+    transition: 'all 0.2s'
+  };
+  
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    marginBottom: '0.25rem',
+    color: 'var(--text-primary)'
+  };
+
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [loadingEmpleados, setLoadingEmpleados] = useState(false);
   const [loadingRegistro, setLoadingRegistro] = useState(false);
   const [empleados, setEmpleados] = useState<EmpleadoOption[]>([]);
@@ -78,6 +114,15 @@ export default function ModalCrearEditarHorasExtras({
   const titulo = esEdicion ? 'Editar Registro de Horas Extras' : 'Registrar Horas Extras';
 
   // ========== EFECTOS ==========
+  
+  // Sincronizar el estado del modal con las props
+  useEffect(() => {
+    if (isOpen && !modal.isOpen) {
+      modal.openModal();
+    } else if (!isOpen && modal.isOpen) {
+      modal.closeModal();
+    }
+  }, [isOpen, modal.isOpen]);
   
   // Cargar empleados al abrir
   useEffect(() => {
@@ -308,73 +353,94 @@ export default function ModalCrearEditarHorasExtras({
   
   function handleClose() {
     if (loading) return;
+    modal.closeModal();
     onClose();
   }
+
+  // Footer del modal
+  const modalFooter = (
+    <div className="flex items-center justify-end gap-3">
+      <Button
+        variant="neutral"
+        onClick={handleClose}
+        disabled={loading || loadingData}
+        size="md"
+      >
+        Cancelar
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        disabled={loading || loadingData || loadingEmpleados || (salarioBase === 0 && !esEdicion)}
+        size="md"
+      >
+        <Save size={16} />
+        {loading ? 'Guardando...' : esEdicion ? 'Actualizar' : 'Registrar'}
+      </Button>
+    </div>
+  );
 
   // ========== RENDER ==========
   
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen={modal.isOpen}
       onClose={handleClose}
       title={titulo}
-      icon={<Clock size={22} style={{ color: 'var(--ot-blue-500)' }} />}
-      maxWidth="max-w-5xl"
-    >
-      {loadingRegistro ? (
-        <div className="p-8 flex justify-center">
-          <Loader />
+      icon={<Clock size={20} style={{ color: 'var(--ot-blue-500)' }} />}
+      maxWidth="7xl"
+      description="Complete la información del registro de horas extras. Los campos marcados con * son obligatorios."
+      footer={modalFooter}
+      closeOnBackdropClick={false}
+      closeOnEscape={true}
+      preventBodyScroll={true}
+      isLoading={loadingRegistro}
+      loadingComponent={
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--ot-blue-500)' }}></div>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Cargando datos del registro...
+          </p>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 sm:p-6 space-y-6">
-            
-            {/* ========== INFORMACIÓN BÁSICA ========== */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Layout principal con dos columnas */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+          
+          {/* Columna Izquierda */}
+          <div className="space-y-4">
+            {/* Información del Empleado */}
+            <div className="rounded-lg p-3 sm:p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-sm sm:text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <User size={16} />
+                Información del Empleado
+              </h3>
               
               {/* Selector de Empleado */}
               {!esEdicion && (
-                <div className="md:col-span-2">
-                  <label 
-                    htmlFor="empleadoId" 
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
-                    <User size={16} className="inline mr-1" />
-                    Empleado *
-                  </label>
+                <div>
                   {loadingEmpleados ? (
-                    <div className="flex items-center space-x-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                    <div className="flex items-center space-x-2 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" />
                       <span style={{ color: 'var(--text-muted)' }}>Cargando empleados...</span>
                     </div>
                   ) : (
                     <>
-                      <select
-                        id="empleadoId"
+                      <SelectField
+                        label="Empleado"
                         value={empleadoId}
-                        onChange={(e) => setEmpleadoId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border transition-colors"
-                        style={{
-                          background: 'var(--surface)',
-                          borderColor: errors.empleadoId ? '#ef4444' : 'var(--border)',
-                          color: 'var(--text-primary)',
-                        }}
+                        onChange={setEmpleadoId}
+                        options={empleados.map(emp => ({
+                          value: emp._id,
+                          label: formatEmpleadoLabel(emp)
+                        }))}
+                        placeholder="Seleccione un empleado"
+                        required
+                        error={errors.empleadoId}
                         disabled={loading}
-                      >
-                        <option value="">Seleccione un empleado</option>
-                        {empleados.map(emp => (
-                          <option key={emp._id} value={emp._id}>
-                            {formatEmpleadoLabel(emp)}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.empleadoId && (
-                        <p className="mt-1 text-sm text-red-500 flex items-center">
-                          <AlertCircle size={14} className="mr-1" />
-                          {errors.empleadoId}
-                        </p>
-                      )}
+                        clearable
+                      />
                       {empleadoSeleccionado && empleadoSeleccionado.salario && (
                         <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                           Salario: ${empleadoSeleccionado.salario.monto.toLocaleString('es-CO')} {empleadoSeleccionado.salario.moneda}
@@ -386,7 +452,7 @@ export default function ModalCrearEditarHorasExtras({
               )}
               
               {esEdicion && registroOriginal && (
-                <div className="md:col-span-2 p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
+                <div className="p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
                   <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                     <User size={16} className="inline mr-1" />
                     Empleado: {typeof registroOriginal.empleadoId === 'string' 
@@ -395,135 +461,113 @@ export default function ModalCrearEditarHorasExtras({
                   </p>
                 </div>
               )}
-              
-              {/* Año */}
-              <div>
-                <label 
-                  htmlFor="anio" 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  Año *
-                </label>
-                <input
-                  type="number"
-                  id="anio"
-                  value={anio}
-                  onChange={(e) => setAnio(parseInt(e.target.value))}
-                  min={2020}
-                  max={2050}
-                  className="w-full px-3 py-2 rounded-lg border transition-colors"
-                  style={{
-                    background: 'var(--surface)',
-                    borderColor: errors.anio ? '#ef4444' : 'var(--border)',
-                    color: 'var(--text-primary)',
-                  }}
-                  disabled={loading || esEdicion}
-                />
-                {errors.anio && (
-                  <p className="mt-1 text-sm text-red-500">{errors.anio}</p>
-                )}
-              </div>
-              
-              {/* Mes */}
-              <div>
-                <label 
-                  htmlFor="mes" 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  Mes *
-                </label>
-                <select
-                  id="mes"
-                  value={mes}
-                  onChange={(e) => setMes(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg border transition-colors"
-                  style={{
-                    background: 'var(--surface)',
-                    borderColor: errors.mes ? '#ef4444' : 'var(--border)',
-                    color: 'var(--text-primary)',
-                  }}
-                  disabled={loading || esEdicion}
-                >
-                  {MESES_LABELS.map((label, index) => (
-                    <option key={index + 1} value={index + 1}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                {errors.mes && (
-                  <p className="mt-1 text-sm text-red-500">{errors.mes}</p>
-                )}
-              </div>
-              
-              {/* Quincena */}
-              <div>
-                <label 
-                  htmlFor="quincena" 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  Quincena *
-                </label>
-                <select
-                  id="quincena"
-                  value={quincena}
-                  onChange={(e) => setQuincena(parseInt(e.target.value) as 1 | 2)}
-                  className="w-full px-3 py-2 rounded-lg border transition-colors"
-                  style={{
-                    background: 'var(--surface)',
-                    borderColor: 'var(--border)',
-                    color: 'var(--text-primary)',
-                  }}
-                  disabled={loading || esEdicion}
-                >
-                  {QUINCENAS.map(q => (
-                    <option key={q.value} value={q.value}>
-                      {q.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Horas Laborales del Mes */}
-              <div>
-                <label 
-                  htmlFor="horasLaboralesMes" 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  <Calendar size={16} className="inline mr-1" />
-                  Horas Laborales Mes *
-                </label>
-                <input
-                  type="number"
-                  id="horasLaboralesMes"
-                  value={horasLaboralesMes}
-                  onChange={(e) => setHorasLaboralesMes(parseInt(e.target.value))}
-                  min={1}
-                  max={300}
-                  className="w-full px-3 py-2 rounded-lg border transition-colors"
-                  style={{
-                    background: 'var(--surface)',
-                    borderColor: errors.horasLaboralesMes ? '#ef4444' : 'var(--border)',
-                    color: 'var(--text-primary)',
-                  }}
-                  disabled={loading}
-                />
-                {errors.horasLaboralesMes && (
-                  <p className="mt-1 text-sm text-red-500">{errors.horasLaboralesMes}</p>
-                )}
-                <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Por defecto: 220 horas (Ley Colombiana)
-                </p>
-              </div>
-              
             </div>
-            
-            {/* ========== RESUMEN DE CÁLCULOS ========== */}
+
+            {/* Información del Período */}
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Calendar size={16} />
+                Información del Período
+              </h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Año */}
+                  <div>
+                    <label style={labelStyle}>
+                      Año *
+                    </label>
+                    <input
+                      type="number"
+                      value={anio}
+                      onChange={(e) => setAnio(parseInt(e.target.value))}
+                      min={2020}
+                      max={2050}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.anio ? '#ef4444' : 'var(--border)',
+                      }}
+                      disabled={loading || esEdicion}
+                      required
+                    />
+                    {errors.anio && (
+                      <p className="mt-1 text-sm text-red-500">{errors.anio}</p>
+                    )}
+                  </div>
+                  
+                  {/* Mes */}
+                  <div>
+                    <SelectField
+                      label="Mes"
+                      value={mes.toString()}
+                      onChange={(value) => setMes(parseInt(value))}
+                      options={MESES_LABELS.map((label, index) => ({
+                        value: (index + 1).toString(),
+                        label: label
+                      }))}
+                      placeholder="Seleccione el mes"
+                      required
+                      error={errors.mes}
+                      disabled={loading || esEdicion}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Quincena */}
+                  <div>
+                    <SelectField
+                      label="Quincena"
+                      value={quincena.toString()}
+                      onChange={(value) => setQuincena(parseInt(value) as 1 | 2)}
+                      options={QUINCENAS.map(q => ({
+                        value: q.value.toString(),
+                        label: q.label
+                      }))}
+                      placeholder="Seleccione la quincena"
+                      required
+                      disabled={loading || esEdicion}
+                    />
+                  </div>
+                  
+                  {/* Horas Laborales del Mes */}
+                  <div>
+                    <label style={labelStyle}>
+                      Horas Laborales Mes *
+                    </label>
+                    <input
+                      type="number"
+                      value={horasLaboralesMes}
+                      onChange={(e) => setHorasLaboralesMes(parseInt(e.target.value))}
+                      min={1}
+                      max={300}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.horasLaboralesMes ? '#ef4444' : 'var(--border)',
+                      }}
+                      disabled={loading}
+                      required
+                    />
+                    {errors.horasLaboralesMes && (
+                      <p className="mt-1 text-sm text-red-500">{errors.horasLaboralesMes}</p>
+                    )}
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Por defecto: 220 horas (Ley Colombiana)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha */}
+          <div className="space-y-4">
+            {/* Resumen de Cálculos */}
             {salarioBase > 0 && (
-              <div className="border rounded-lg p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface-muted)' }}>
+              <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+                <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <Hash size={16} />
+                  Resumen de Cálculos
+                </h3>
                 <ResumenCalculos
                   salarioBase={salarioBase}
                   horasLaboralesMes={horasLaboralesMes}
@@ -533,13 +577,13 @@ export default function ModalCrearEditarHorasExtras({
                 />
               </div>
             )}
-            
-            {/* ========== DETALLES DE HORAS EXTRAS ========== */}
-            <div>
-              <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
-                <Clock size={16} className="inline mr-1" />
-                Detalles de Horas Extras *
-              </label>
+
+            {/* Detalles de Horas Extras */}
+            <div className="rounded-lg p-4" style={{ background: 'var(--surface-muted)' }}>
+              <h3 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Clock size={16} />
+                Detalles de Horas Extras
+              </h3>
               <FormularioDetalleHora
                 detalles={detalles}
                 onChange={setDetalles}
@@ -554,7 +598,8 @@ export default function ModalCrearEditarHorasExtras({
             
             {/* Errores de detalles individuales */}
             {Object.keys(errors).filter(k => k.startsWith('detalle_')).length > 0 && (
-              <div className="p-3 rounded-lg border" style={{ background: '#fee2e2', borderColor: '#ef4444' }}>
+              <div className="rounded-lg p-3 border" style={{ background: '#fee2e2', borderColor: '#ef4444' }}>
+                <h4 className="text-sm font-medium text-red-700 mb-2">Errores en detalles:</h4>
                 {Object.entries(errors)
                   .filter(([k]) => k.startsWith('detalle_'))
                   .map(([k, v]) => (
@@ -562,54 +607,10 @@ export default function ModalCrearEditarHorasExtras({
                   ))}
               </div>
             )}
-            
           </div>
-          
-          {/* ========== FOOTER CON ACCIONES ========== */}
-          <div 
-            className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 p-4 sm:p-6 border-t"
-            style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
-          >
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={loading}
-              className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
-              style={{
-                background: 'var(--surface-muted)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              <X size={18} className="mr-2" />
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading || loadingEmpleados || (salarioBase === 0 && !esEdicion)}
-              className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
-              style={{
-                background: loading ? 'var(--surface-muted)' : 'var(--ot-blue-500)',
-                color: loading ? 'var(--text-muted)' : '#ffffff',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1,
-              }}
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save size={18} className="mr-2" />
-                  {esEdicion ? 'Actualizar' : 'Registrar'}
-                </>
-              )}
-            </button>
-          </div>
-          
-        </form>
-      )}
+        </div>
+
+      </form>
     </Modal>
   );
 }

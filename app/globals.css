@@ -1,68 +1,85 @@
 @import "tailwindcss";
 @plugin  "daisyui";
 
-:root {
-  /* Paleta corporativa */
-  --ot-black: #18181b; /* zinc-900 */
-  --ot-blue-500: #1c41d9;
-  --ot-blue-600: #1c3fb8;
-  --ot-blue-700: #1e338a;
-  --ot-blue-50: #eff6ff;
-  --ot-white: #f9fafb;
-  --ot-muted: #a1a1aa;
-  
-  /* Colores adicionales para el sistema */
-  --ot-pink-500: #ec4899;
-  --ot-pink-600: #db2777;
-  --ot-pink-50: #fdf2f8;
-  --ot-green-500: #10b981;
-  --ot-green-600: #059669;
-  --ot-green-50: #d1fae5;
-  --ot-purple-500: #8b5cf6;
-  --ot-purple-600: #7c3aed;
-  --ot-purple-50: #faf5ff;
-  --ot-orange-500: #f97316;
-  --ot-orange-600: #ea580c;
-  --ot-orange-50: #fff7ed;
-  --ot-gray-600: #4b5563;
+@layer base {
+  :root {
+    /* Paleta corporativa */
+    --ot-black: #18181b; /* zinc-900 */
+    --ot-blue-500: #b1bbe2;
+    --ot-blue-600: #5d7c9c;
+    --ot-blue-700: #1e338a;
+    --ot-blue-50: #eff6ff;
+    --ot-white: #f9fafb;
+    --ot-muted: #a1a1aa;
+    
+    /* Colores adicionales para el sistema */
+    --ot-pink-500: #ec4899;
+    --ot-pink-600: #db2777;
+    --ot-pink-50: #fdf2f8;
+    --ot-green-500: #10b981;
+    --ot-green-600: #059669;
+    --ot-green-50: #d1fae5;
+    --ot-purple-500: #8b5cf6;
+    --ot-purple-600: #7c3aed;
+    --ot-purple-50: #faf5ff;
+    --ot-orange-500: #f97316;
+    --ot-orange-600: #ea580c;
+    --ot-orange-50: #fff7ed;
+    --ot-gray-600: #4b5563;
 
-  /* Fondo por defecto (claro) */
-  --background: #f7f9fc; /* claro corporativo suave */
-  --foreground: var(--ot-black);
+    /* Fondo por defecto (claro) */
+    --background: #f7f9fc; /* claro corporativo suave */
+    --foreground: var(--ot-black);
 
-  /* Superficies y bordes (claro) */
-  --surface: #ffffff; /* tarjetas/navbars/sidebar */
-  --surface-muted: #eef2ff; /* azul muy suave para hover/selección */
-  --border: #e5e7eb;
-  --text-primary: var(--ot-black);
-  --text-muted: var(--ot-muted);
+    /* Superficies y bordes (claro) */
+    --surface: #ffffff; /* tarjetas/navbars/sidebar */
+    --surface-muted: #eef2ff; /* azul muy suave para hover/selección */
+    --border: #e5e7eb;
+    --text-primary: var(--ot-black);
+    --text-muted: var(--ot-muted);
 
-  /* Inputs (claro) */
-  --input-bg: #ffffff;
-  --input-border: #dbe2f1; /* borde sutil con tinte acorde */
+    /* Inputs (claro) */
+    --input-bg: #ffffff;
+    --input-border: #dbe2f1; /* borde sutil con tinte acorde */
 
-  /* Gradiente corporativo */
-  --ot-gradient: linear-gradient(135deg, var(--ot-blue-700) 0%, var(--ot-blue-500) 50%, #000000 100%);
+    /* Gradiente corporativo */
+    --ot-gradient: linear-gradient(135deg, var(--ot-blue-700) 0%, var(--ot-blue-500) 50%, #000000 100%);
+  }
 }
 
-/* Paleta como variables directamente en :root */
-:root {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-ot-black: var(--ot-black);
-  --color-ot-blue-500: var(--ot-blue-500);
-  --color-ot-blue-700: var(--ot-blue-700);
-  --color-ot-white: var(--ot-white);
-  --color-ot-muted: var(--ot-muted);
-  --gradient-ot: var(--ot-gradient);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@layer utilities {
+  /* Background utilities */
+  .bg-background { background-color: var(--background); }
+  .bg-surface { background-color: var(--surface); }
+  .bg-surface-muted { background-color: var(--surface-muted); }
+  
+  /* Text utilities */
+  .text-foreground { color: var(--foreground); }
+  .text-primary { color: var(--text-primary); }
+  .text-muted { color: var(--text-muted); }
+  
+  /* Border utilities */
+  .border-border { border-color: var(--border); }
+  
+  /* Hover utilities */
+  .hover-surface:hover { background-color: var(--surface-muted); }
+  
+  /* Gradient utilities */
+  .bg-ot-gradient { background: var(--ot-gradient); }
+  
+  /* Custom spacing for sidebar */
+  .sidebar-width { width: 18rem; }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0b0c10; /* más legible que #000 puro */
     --foreground: #e6e6e6;
+    --surface: rgba(255,255,255,0.06);
+    --surface-muted: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.14);
+    --text-primary: var(--ot-white);
+    --text-muted: #9ca3af;
   }
 }
 

@@ -10,6 +10,64 @@ import type {
   EmpleadosDisponibles,
 } from './types';
 
+// ========== UTILIDADES ==========
+
+/**
+ * Normaliza una URL de Cloudinary para asegurar que sea accesible
+ * Convierte URLs con transformaciones automáticas a URLs simples
+ */
+export function normalizeCloudinaryUrl(url: string): string {
+  if (!url || !url.includes('cloudinary.com')) {
+    return url;
+  }
+
+  try {
+    // Si la URL ya es simple (sin transformaciones automáticas), devolverla tal como está
+    if (!url.includes('/auto/upload/') && !url.includes('/upload/s--')) {
+      return url;
+    }
+
+    // Extraer el public_id de la URL
+    const urlParts = url.split('/');
+    const uploadIndex = urlParts.findIndex(part => part === 'upload');
+    
+    if (uploadIndex === -1 || uploadIndex + 1 >= urlParts.length) {
+      return url;
+    }
+
+    // Buscar el public_id después de las transformaciones
+    let publicId = '';
+    for (let i = uploadIndex + 1; i < urlParts.length; i++) {
+      const part = urlParts[i];
+      if (part.includes('.') && !part.includes('--')) {
+        publicId = part;
+        break;
+      }
+    }
+
+    if (!publicId) {
+      return url;
+    }
+
+    // Generar una URL simple sin transformaciones automáticas
+    const cloudName = urlParts[2]; // res.cloudinary.com/[cloudName]/...
+    return `https://res.cloudinary.com/${cloudName}/image/upload/${publicId}`;
+  } catch (error) {
+    console.warn('Error normalizando URL de Cloudinary:', error);
+    return url;
+  }
+}
+
+/**
+ * Normaliza las URLs de las imágenes en un modelo
+ */
+export function normalizeModeloImageUrls(modelo: Modelo): Modelo {
+  if (modelo.fotoPerfil) {
+    modelo.fotoPerfil = normalizeCloudinaryUrl(modelo.fotoPerfil);
+  }
+  return modelo;
+}
+
 // ========== CRUD de Modelos ==========
 
 export async function getModelos(
@@ -29,25 +87,34 @@ export async function getModelos(
     ? `${CLIENTES_ROUTES.modelos.list}?${searchParams}`
     : CLIENTES_ROUTES.modelos.list;
 
-  return requestJSON<Modelo[]>(url, {
+  const modelos = await requestJSON<Modelo[]>(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
+  
+  // Normalizar URLs de imágenes
+  return modelos.map(modelo => normalizeModeloImageUrls(modelo));
 }
 
 export async function getModelo(token: string, id: string): Promise<Modelo> {
-  return requestJSON<Modelo>(CLIENTES_ROUTES.modelos.detail(id), {
+  const modelo = await requestJSON<Modelo>(CLIENTES_ROUTES.modelos.detail(id), {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
+  
+  // Normalizar URLs de imágenes
+  return normalizeModeloImageUrls(modelo);
 }
 
 export async function createModelo(token: string, data: CreateModeloDto): Promise<Modelo> {
-  return requestJSON<Modelo>(CLIENTES_ROUTES.modelos.create, {
+  const modelo = await requestJSON<Modelo>(CLIENTES_ROUTES.modelos.create, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
   });
+  
+  // Normalizar URLs de imágenes
+  return normalizeModeloImageUrls(modelo);
 }
 
 export async function updateModelo(
@@ -55,11 +122,14 @@ export async function updateModelo(
   id: string,
   data: UpdateModeloDto,
 ): Promise<Modelo> {
-  return requestJSON<Modelo>(CLIENTES_ROUTES.modelos.update(id), {
+  const modelo = await requestJSON<Modelo>(CLIENTES_ROUTES.modelos.update(id), {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
   });
+  
+  // Normalizar URLs de imágenes
+  return normalizeModeloImageUrls(modelo);
 }
 
 export async function deleteModelo(token: string, id: string): Promise<void> {

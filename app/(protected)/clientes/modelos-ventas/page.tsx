@@ -5,6 +5,7 @@ import { TrendingUp, User, Filter, BarChart3, RefreshCw, TrendingDown, FileSprea
 import Loader from '@/components/ui/Loader';
 import { SelectField } from '@/components/ui/selectUI';
 import { addToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 import { ModeloVentasDashboard } from '@/components/clientes/ModeloVentasDashboard';
 import { ModeloVentasFilters } from '@/components/clientes/ModeloVentasFilters';
 import { ModeloVentasTable } from '@/components/clientes/ModeloVentasTable';
@@ -289,61 +290,64 @@ export default function ModelosVentasPage() {
 
         <div className="flex items-center gap-3">
           {/* Refresh Button */}
-          <button
+          <Button
             type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-2"
-            style={{
-              borderColor: 'var(--border)',
-              background: 'var(--surface)',
-              color: 'var(--text-primary)',
-            }}
+            variant="neutral"
+            size="sm"
+            icon={<RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />}
+            loading={refreshing}
           >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
             Actualizar
-          </button>
+          </Button>
 
           {/* View Mode Selector */}
           <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-            <button
+            <Button
               type="button"
               onClick={() => setViewMode('dashboard')}
-              className="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
+              variant={viewMode === 'dashboard' ? 'primary' : 'ghost'}
+              size="sm"
+              icon={<BarChart3 size={16} />}
               style={{
-                background: viewMode === 'dashboard' ? 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))' : 'var(--surface)',
-                color: viewMode === 'dashboard' ? '#ffffff' : 'var(--text-primary)',
+                borderRadius: 0,
+                border: 'none',
+                background: viewMode === 'dashboard' ? 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))' : undefined
               }}
             >
-              <BarChart3 size={16} />
               Dashboard
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setViewMode('indicadores')}
-              className="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 border-l"
+              variant={viewMode === 'indicadores' ? 'primary' : 'ghost'}
+              size="sm"
+              icon={<TrendingDown size={16} />}
               style={{
-                borderColor: 'var(--border)',
-                background: viewMode === 'indicadores' ? 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))' : 'var(--surface)',
-                color: viewMode === 'indicadores' ? '#ffffff' : 'var(--text-primary)',
+                borderRadius: 0,
+                border: 'none',
+                borderLeft: '1px solid var(--border)',
+                background: viewMode === 'indicadores' ? 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))' : undefined
               }}
             >
-              <TrendingDown size={16} />
               Indicadores
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setViewMode('modelo')}
-              className="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 border-l"
+              variant={viewMode === 'modelo' ? 'primary' : 'ghost'}
+              size="sm"
+              icon={<User size={16} />}
               style={{
-                borderColor: 'var(--border)',
-                background: viewMode === 'modelo' ? 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))' : 'var(--surface)',
-                color: viewMode === 'modelo' ? '#ffffff' : 'var(--text-primary)',
+                borderRadius: 0,
+                border: 'none',
+                borderLeft: '1px solid var(--border)',
+                background: viewMode === 'modelo' ? 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))' : undefined
               }}
             >
-              <User size={16} />
               Por Modelo
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -351,34 +355,36 @@ export default function ModelosVentasPage() {
       {/* Botones de Exportación (visible solo en vista de modelo con datos) */}
       {viewMode === 'modelo' && selectedModeloId && modeloData && (
         <div className="flex items-center gap-2 justify-end">
-          <button
+          <Button
             type="button"
             onClick={handleExportExcel}
             disabled={exporting}
-            className="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-2"
+            variant="neutral"
+            size="sm"
+            icon={<FileSpreadsheet size={16} />}
+            loading={exporting}
+            loadingText="Exportando..."
             style={{
-              borderColor: 'var(--border)',
-              background: 'var(--surface)',
-              color: exporting ? 'var(--text-muted)' : '#10b981',
+              color: '#10b981'
             }}
           >
-            <FileSpreadsheet size={16} />
-            {exporting ? 'Exportando...' : 'Exportar Excel'}
-          </button>
-          <button
+            Exportar Excel
+          </Button>
+          <Button
             type="button"
             onClick={handleExportPdf}
             disabled={exporting}
-            className="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-2"
+            variant="neutral"
+            size="sm"
+            icon={<FileText size={16} />}
+            loading={exporting}
+            loadingText="Exportando..."
             style={{
-              borderColor: 'var(--border)',
-              background: 'var(--surface)',
-              color: exporting ? 'var(--text-muted)' : '#ef4444',
+              color: '#ef4444'
             }}
           >
-            <FileText size={16} />
-            {exporting ? 'Exportando...' : 'Exportar PDF'}
-          </button>
+            Exportar PDF
+          </Button>
         </div>
       )}
 
@@ -456,17 +462,19 @@ export default function ModelosVentasPage() {
                     />
                   </div>
                   <div className="flex items-end">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => loadDashboard(false)}
-                      className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                      variant="primary"
+                      size="md"
+                      full
                       style={{
                         background: 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))',
                         color: '#ffffff',
                       }}
                     >
                       Aplicar filtros
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -517,17 +525,19 @@ export default function ModelosVentasPage() {
                     />
                   </div>
                   <div className="flex items-end">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => loadIndicadores(false)}
-                      className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                      variant="primary"
+                      size="md"
+                      full
                       style={{
                         background: 'linear-gradient(90deg, var(--ot-blue-500), var(--ot-blue-700))',
                         color: '#ffffff',
                       }}
                     >
                       Aplicar filtros
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

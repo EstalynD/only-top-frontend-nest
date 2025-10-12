@@ -93,7 +93,7 @@ export default function CambiarEstadoGastoModal({
       onClose={onClose}
       title="Cambiar Estado del Gasto"
       icon={headerIcon}
-      maxWidth="max-w-md"
+      maxWidth="md"
     >
       <div className="p-6 space-y-6">
           {/* Concepto del gasto */}

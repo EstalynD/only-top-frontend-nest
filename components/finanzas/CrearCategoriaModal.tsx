@@ -106,7 +106,7 @@ export default function CrearCategoriaModal({ onSave, onClose }: CrearCategoriaM
       onClose={onClose}
       title="Nueva Categoría"
       icon={headerIcon}
-      maxWidth="max-w-xl"
+      maxWidth="xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {/* Información de la Categoría */}

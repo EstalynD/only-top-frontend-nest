@@ -137,7 +137,7 @@ export default function RegistrarGastoModal({
       onClose={onClose}
       title={isEditing ? 'Editar Gasto' : 'Registrar Nuevo Gasto'}
       icon={headerIcon}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {/* Información del Gasto */}

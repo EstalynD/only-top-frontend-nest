@@ -113,7 +113,7 @@ export function CalcularFinanzasModal({
       onClose={onClose}
       title={modeloNombre ? `Calcular Finanzas - ${modeloNombre}` : 'Calcular Finanzas'}
       icon={headerIcon}
-      maxWidth="max-w-lg"
+      maxWidth="lg"
     >
       <div className="p-6 space-y-4">
           {resultado ? (

@@ -130,7 +130,7 @@ export default function EliminarNominaModal({
       onClose={onClose}
       title="Eliminar Nómina Generada"
       icon={headerIcon}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <div className="p-6 space-y-6">
         {/* Información del período */}

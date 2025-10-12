@@ -4,7 +4,8 @@ import React from 'react';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
-import { crearCuentaParaEmpleado, type CrearCuentaResponse } from '@/lib/service-rrhh/empleados.api';
+import { useTheme } from '@/lib/theme';
+import { crearCuentaParaEmpleado } from '@/lib/service-rrhh/empleados-api';
 import { UserPlus, Copy, CheckCircle, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
 
@@ -26,15 +27,16 @@ export default function CrearCuentaModal({
   onSuccess
 }: CrearCuentaModalProps) {
   const { toast } = useToast();
+  const { theme } = useTheme();
   const [loading, setLoading] = React.useState(false);
-  const [cuentaCreada, setCuentaCreada] = React.useState<CrearCuentaResponse | null>(null);
+  const [cuentaCreada, setCuentaCreada] = React.useState<{ username: string; password: string; email: string } | null>(null);
   const [mostrarPassword, setMostrarPassword] = React.useState(false);
   const [copied, setCopied] = React.useState<'username' | 'password' | 'email' | null>(null);
 
   const handleCrearCuenta = async () => {
     setLoading(true);
     try {
-      const resultado = await crearCuentaParaEmpleado(token, empleadoId);
+      const resultado = await crearCuentaParaEmpleado(empleadoId, token);
       setCuentaCreada(resultado);
       toast({
         type: 'success',
@@ -84,73 +86,62 @@ export default function CrearCuentaModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={cuentaCreada ? 'Cuenta Creada' : 'Crear Cuenta de Usuario'}
-      icon={<UserPlus size={20} style={{ color: 'var(--ot-blue-600)' }} />}
-      maxWidth="max-w-lg"
+      icon={<UserPlus size={20} className="text-blue-600 dark:text-blue-400" />}
+      maxWidth="lg"
     >
-      <div style={{ padding: '1.5rem' }}>
+      <div className="p-4 sm:p-6">
         {!cuentaCreada ? (
           /* Confirmación de creación */
           <div className="space-y-4">
-            <div
-              style={{
-                padding: '1rem',
-                backgroundColor: 'var(--ot-blue-50)',
-                borderLeft: '4px solid var(--ot-blue-500)',
-                borderRadius: '0.375rem'
-              }}
-            >
-              <p style={{ fontSize: '0.875rem', color: 'var(--ot-gray-700)' }}>
+            {/* Información del empleado */}
+            <div className={`p-4 rounded-lg border-l-4 ${
+              theme === 'dark' 
+                ? 'bg-blue-900/20 border-blue-500' 
+                : 'bg-blue-50 border-blue-500'
+            }`}>
+              <p className={`text-sm ${
+                theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+              }`}>
                 Se creará una cuenta de usuario para:
               </p>
-              <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ot-gray-900)', marginTop: '0.5rem' }}>
+              <p className={`text-base font-semibold mt-2 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
                 {empleadoNombre}
               </p>
             </div>
 
-            <div
-              style={{
-                padding: '1rem',
-                backgroundColor: 'var(--ot-yellow-50)',
-                borderLeft: '4px solid var(--ot-yellow-500)',
-                borderRadius: '0.375rem'
-              }}
-            >
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <AlertCircle size={18} style={{ color: 'var(--ot-yellow-600)', flexShrink: 0, marginTop: '0.125rem' }} />
-                <div style={{ fontSize: '0.875rem', color: 'var(--ot-gray-700)' }}>
+            {/* Advertencia importante */}
+            <div className={`p-4 rounded-lg border-l-4 ${
+              theme === 'dark' 
+                ? 'bg-yellow-900/20 border-yellow-500' 
+                : 'bg-yellow-50 border-yellow-500'
+            }`}>
+              <div className="flex gap-3">
+                <AlertCircle size={18} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className={`text-sm ${
+                  theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'
+                }`}>
                   <strong>Importante:</strong> Se generarán credenciales automáticamente. Asegúrate de guardarlas de forma segura, ya que la contraseña solo se mostrará una vez.
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-              <button
+            {/* Botones de acción */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
+              <Button
+                variant="neutral"
                 onClick={handleClose}
                 disabled={loading}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  color: 'var(--ot-gray-700)',
-                  backgroundColor: 'white',
-                  border: '1px solid var(--ot-gray-300)',
-                  borderRadius: '0.375rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
-                }}
+                size="sm"
               >
                 Cancelar
-              </button>
+              </Button>
               <Button
+                variant="primary"
                 onClick={handleCrearCuenta}
                 disabled={loading}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  fontSize: '0.875rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
+                size="sm"
               >
                 {loading ? (
                   <>
@@ -169,22 +160,22 @@ export default function CrearCuentaModal({
         ) : (
           /* Mostrar credenciales */
           <div className="space-y-4">
-            <div
-              style={{
-                padding: '1rem',
-                backgroundColor: 'var(--ot-green-50)',
-                borderLeft: '4px solid var(--ot-green-500)',
-                borderRadius: '0.375rem',
-                display: 'flex',
-                gap: '0.5rem'
-              }}
-            >
-              <CheckCircle size={20} style={{ color: 'var(--ot-green-600)', flexShrink: 0 }} />
+            {/* Éxito */}
+            <div className={`p-4 rounded-lg border-l-4 flex gap-3 ${
+              theme === 'dark' 
+                ? 'bg-green-900/20 border-green-500' 
+                : 'bg-green-50 border-green-500'
+            }`}>
+              <CheckCircle size={20} className="text-green-600 dark:text-green-400 flex-shrink-0" />
               <div>
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ot-green-800)' }}>
+                <p className={`text-sm font-semibold ${
+                  theme === 'dark' ? 'text-green-200' : 'text-green-800'
+                }`}>
                   Cuenta creada exitosamente
                 </p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--ot-green-700)', marginTop: '0.25rem' }}>
+                <p className={`text-sm mt-1 ${
+                  theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                }`}>
                   Guarda estas credenciales de forma segura
                 </p>
               </div>
@@ -192,169 +183,135 @@ export default function CrearCuentaModal({
 
             {/* Usuario */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--ot-gray-700)', marginBottom: '0.5rem' }}>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 Usuario
               </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="flex gap-2">
                 <input
                   type="text"
                   value={cuentaCreada.username}
                   readOnly
-                  style={{
-                    flex: 1,
-                    padding: '0.625rem',
-                    fontSize: '0.875rem',
-                    fontFamily: 'monospace',
-                    backgroundColor: 'var(--ot-gray-50)',
-                    border: '1px solid var(--ot-gray-300)',
-                    borderRadius: '0.375rem',
-                    color: 'var(--ot-gray-900)'
-                  }}
+                  className={`flex-1 px-3 py-2 text-sm font-mono rounded-lg border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-300'
+                      : 'bg-gray-50 border-gray-300 text-gray-900'
+                  }`}
                 />
-                <button
+                <Button
+                  variant={copied === 'username' ? 'success' : 'secondary'}
+                  size="sm"
                   onClick={() => handleCopy(cuentaCreada.username, 'username')}
-                  style={{
-                    padding: '0.625rem',
-                    backgroundColor: copied === 'username' ? 'var(--ot-green-100)' : 'var(--ot-gray-100)',
-                    border: '1px solid var(--ot-gray-300)',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
                   title="Copiar usuario"
                 >
                   {copied === 'username' ? (
-                    <CheckCircle size={18} style={{ color: 'var(--ot-green-600)' }} />
+                    <CheckCircle size={16} />
                   ) : (
-                    <Copy size={18} style={{ color: 'var(--ot-gray-600)' }} />
+                    <Copy size={16} />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Contraseña */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--ot-gray-700)', marginBottom: '0.5rem' }}>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 Contraseña
               </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
                   <input
                     type={mostrarPassword ? 'text' : 'password'}
                     value={cuentaCreada.password}
                     readOnly
-                    style={{
-                      width: '100%',
-                      padding: '0.625rem',
-                      paddingRight: '2.5rem',
-                      fontSize: '0.875rem',
-                      fontFamily: 'monospace',
-                      backgroundColor: 'var(--ot-gray-50)',
-                      border: '1px solid var(--ot-gray-300)',
-                      borderRadius: '0.375rem',
-                      color: 'var(--ot-gray-900)'
-                    }}
+                    className={`w-full px-3 py-2 pr-10 text-sm font-mono rounded-lg border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-300'
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    }`}
                   />
                   <button
                     onClick={() => setMostrarPassword(!mostrarPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '0.5rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      padding: '0.25rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--ot-gray-500)'
-                    }}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                      theme === 'dark'
+                        ? 'text-gray-400 hover:text-gray-300'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
                     title={mostrarPassword ? 'Ocultar' : 'Mostrar'}
                   >
                     {mostrarPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <button
+                <Button
+                  variant={copied === 'password' ? 'success' : 'secondary'}
+                  size="sm"
                   onClick={() => handleCopy(cuentaCreada.password, 'password')}
-                  style={{
-                    padding: '0.625rem',
-                    backgroundColor: copied === 'password' ? 'var(--ot-green-100)' : 'var(--ot-gray-100)',
-                    border: '1px solid var(--ot-gray-300)',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
                   title="Copiar contraseña"
                 >
                   {copied === 'password' ? (
-                    <CheckCircle size={18} style={{ color: 'var(--ot-green-600)' }} />
+                    <CheckCircle size={16} />
                   ) : (
-                    <Copy size={18} style={{ color: 'var(--ot-gray-600)' }} />
+                    <Copy size={16} />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Correo */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--ot-gray-700)', marginBottom: '0.5rem' }}>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
                 Correo Electrónico
               </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="flex gap-2">
                 <input
                   type="text"
                   value={cuentaCreada.email}
                   readOnly
-                  style={{
-                    flex: 1,
-                    padding: '0.625rem',
-                    fontSize: '0.875rem',
-                    fontFamily: 'monospace',
-                    backgroundColor: 'var(--ot-gray-50)',
-                    border: '1px solid var(--ot-gray-300)',
-                    borderRadius: '0.375rem',
-                    color: 'var(--ot-gray-900)'
-                  }}
+                  className={`flex-1 px-3 py-2 text-sm font-mono rounded-lg border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-300'
+                      : 'bg-gray-50 border-gray-300 text-gray-900'
+                  }`}
                 />
-                <button
+                <Button
+                  variant={copied === 'email' ? 'success' : 'secondary'}
+                  size="sm"
                   onClick={() => handleCopy(cuentaCreada.email, 'email')}
-                  style={{
-                    padding: '0.625rem',
-                    backgroundColor: copied === 'email' ? 'var(--ot-green-100)' : 'var(--ot-gray-100)',
-                    border: '1px solid var(--ot-gray-300)',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
                   title="Copiar correo"
                 >
                   {copied === 'email' ? (
-                    <CheckCircle size={18} style={{ color: 'var(--ot-green-600)' }} />
+                    <CheckCircle size={16} />
                   ) : (
-                    <Copy size={18} style={{ color: 'var(--ot-gray-600)' }} />
+                    <Copy size={16} />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
-            <div
-              style={{
-                padding: '1rem',
-                backgroundColor: 'var(--ot-red-50)',
-                borderLeft: '4px solid var(--ot-red-500)',
-                borderRadius: '0.375rem',
-                marginTop: '1rem'
-              }}
-            >
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <AlertCircle size={18} style={{ color: 'var(--ot-red-600)', flexShrink: 0, marginTop: '0.125rem' }} />
-                <p style={{ fontSize: '0.875rem', color: 'var(--ot-red-800)' }}>
+            {/* Advertencia final */}
+            <div className={`p-4 rounded-lg border-l-4 ${
+              theme === 'dark' 
+                ? 'bg-red-900/20 border-red-500' 
+                : 'bg-red-50 border-red-500'
+            }`}>
+              <div className="flex gap-3">
+                <AlertCircle size={18} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className={`text-sm ${
+                  theme === 'dark' ? 'text-red-300' : 'text-red-800'
+                }`}>
                   <strong>Advertencia:</strong> Esta es la única vez que se mostrará la contraseña. Guárdala de forma segura antes de cerrar esta ventana.
                 </p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-              <Button onClick={handleClose}>
+            {/* Botón cerrar */}
+            <div className="flex justify-end pt-4">
+              <Button variant="primary" onClick={handleClose}>
                 Cerrar
               </Button>
             </div>

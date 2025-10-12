@@ -202,6 +202,17 @@ export function getIconoCrecimiento(direccion: 'crecimiento' | 'decrecimiento' |
 }
 
 /**
+ * Obtiene el nombre del mes en español
+ */
+export function nombreMes(mes: number): string {
+  const meses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  return meses[mes - 1] || 'Mes inválido';
+}
+
+/**
  * Formatea un porcentaje con signo y color
  */
 export function formatPorcentaje(porcentaje: number): {

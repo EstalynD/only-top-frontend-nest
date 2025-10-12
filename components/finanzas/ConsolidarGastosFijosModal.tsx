@@ -113,7 +113,7 @@ export default function ConsolidarGastosFijosModal({
       onClose={onClose}
       title={`Consolidar Gastos Fijos - ${meses[mes - 1]} ${anio}`}
       icon={headerIcon}
-      maxWidth="max-w-2xl"
+      maxWidth="2xl"
     >
       <div className="p-6 space-y-6">
           {/* Error message */}

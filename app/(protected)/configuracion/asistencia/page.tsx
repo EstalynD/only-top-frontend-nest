@@ -1,9 +1,4 @@
 "use client";
-import AttendanceEnabledFromCard from '@/components/sistema/AttendanceEnabledFromCard';
-import AttendanceStatusCards from '@/components/sistema/AttendanceStatusCards';
-import FixedScheduleOverviewCard from '@/components/sistema/FixedScheduleOverviewCard';
-import RotatingShiftsList from '@/components/sistema/RotatingShiftsList';
-import type { AttendanceConfig as AttendanceConfigType } from '@/lib/service-sistema/attendance.api';
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +7,15 @@ import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
+
+// Componentes del sistema de asistencia
+import AttendanceHeader from '@/components/sistema/AttendanceHeader';
+import AttendanceTabs from '@/components/sistema/AttendanceTabs';
+import AttendanceConfigSection from '@/components/sistema/AttendanceConfigSection';
+import AttendanceAssignmentsSection from '@/components/sistema/AttendanceAssignmentsSection';
+import AttendanceGeneralConfig from '@/components/sistema/AttendanceGeneralConfig';
+import SupernumeraryConfig from '@/components/sistema/SupernumeraryConfig';
 import { 
   getAttendanceConfig,
   updateAttendanceConfig,
@@ -46,21 +50,25 @@ import {
   validateShift
 } from '@/lib/service-sistema/attendance.api';
 import { 
-  Clock, 
-  Calendar, 
-  Users, 
-  Plus, 
-  Edit3, 
-  Trash2,
-  ToggleLeft,
-  ToggleRight,
   Settings,
   Timer,
   RotateCcw,
   Building2,
   Briefcase,
   Users2,
-  ChevronRight
+  Plus, 
+  Edit3, 
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Grid3X3,
+  List,
+  Search,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Clock,
+  Calendar
 } from 'lucide-react';
 import Loader from '@/components/ui/Loader';
 import ShiftAssignmentsModal from '@/components/rrhh/ShiftAssignmentsModal';
@@ -70,11 +78,19 @@ import type { Area, Cargo } from '@/lib/service-rrhh/types';
 export default function AsistenciaPage() {
   const { token } = useAuth();
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   // Estados principales
   const [config, setConfig] = React.useState<AttendanceConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<'config' | 'assignments'>('config');
+  
+  // Estados para turnos rotativos
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [showInactive, setShowInactive] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<'table' | 'cards'>('table');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
 
   // Modal estados
   const [showConfigModal, setShowConfigModal] = React.useState(false);
@@ -392,190 +408,128 @@ export default function AsistenciaPage() {
     return formatDuration(duration.minutes);
   };
 
+  // Filtrado y paginación de turnos rotativos
+  const filteredShifts = React.useMemo(() => {
+    if (!config?.rotatingShifts) return [];
+    
+    return config.rotatingShifts.filter(shift => {
+      const matchesSearch = searchQuery === '' || 
+        shift.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        shift.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = showInactive || shift.isActive;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [config?.rotatingShifts, searchQuery, showInactive]);
+
+  const totalPages = Math.ceil(filteredShifts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedShifts = filteredShifts.slice(startIndex, endIndex);
+
+  // Reset página cuando cambian los filtros
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, showInactive]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader size="lg" label="Cargando configuración de asistencia..." />
+      <div className="flex items-center justify-center min-h-[400px] sm:min-h-[500px]">
+        <div className="text-center">
+          <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-50'
+          }`}>
+            <Loader size="lg" variant="primary" />
+          </div>
+          <p className={`text-sm sm:text-base font-medium ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            Cargando configuración de asistencia...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+        <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 lg:space-y-12">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-          Configuración de Asistencia
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Administra horarios fijos y turnos rotativos para tu organización.
-        </p>
-      </div>
+          <AttendanceHeader />
 
       {/* Tabs */}
-      <div className="border-b" style={{ borderColor: 'var(--border)' }}>
-        <nav className="flex space-x-8">
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'config'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            style={{
-              borderBottomColor: activeTab === 'config' ? 'var(--ot-blue-500)' : 'transparent',
-              color: activeTab === 'config' ? 'var(--ot-blue-600)' : 'var(--text-muted)'
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <Settings size={16} />
-              Configuración
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('assignments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'assignments'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            style={{
-              borderBottomColor: activeTab === 'assignments' ? 'var(--ot-blue-500)' : 'transparent',
-              color: activeTab === 'assignments' ? 'var(--ot-blue-600)' : 'var(--text-muted)'
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <Users2 size={16} />
-              Asignaciones
-            </div>
-          </button>
-        </nav>
-      </div>
+          <AttendanceTabs 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+          />
 
-      {/* Tab Content - Configuración */}
-      {activeTab === 'config' && (
-        <>
-          <Card>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <Clock size={20} style={{ color: 'var(--ot-blue-500)' }} />
-                  <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    Configuraciones de Asistencia
-                  </h2>
-                </div>
-                <Button onClick={() => setShowConfigModal(true)} variant="neutral" className="flex items-center gap-2">
-                  <Settings size={16} />
-                  Configurar
-                </Button>
-              </div>
-
-          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-            Ambas configuraciones están disponibles para ser asignadas a empleados según área y cargo.
-          </p>
-
-          {config && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <AttendanceEnabledFromCard token={token || ''} onUpdated={(cfg: AttendanceConfigType) => setConfig(cfg)} />
-              </div>
-              <AttendanceStatusCards 
-                fixedEnabled={!!config.fixedScheduleEnabled}
-                rotatingEnabled={!!config.rotatingShiftsEnabled}
-                onToggleFixed={handleToggleFixedSchedule}
-                onToggleRotating={handleToggleRotatingShifts}
+          {/* Tab Content - Configuración */}
+          {activeTab === 'config' && (
+            <div className="space-y-6 sm:space-y-8 lg:space-y-12">
+              <AttendanceConfigSection
+                config={config}
+                token={token || ''}
+                onConfigUpdated={setConfig}
+                onShowConfigModal={() => setShowConfigModal(true)}
+                onShowFixedScheduleModal={() => setShowFixedScheduleModal(true)}
+                onToggleFixedSchedule={handleToggleFixedSchedule}
+                onToggleRotatingShifts={handleToggleRotatingShifts}
+                // Props para Turnos Rotativos
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                showInactive={showInactive}
+                setShowInactive={setShowInactive}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                setItemsPerPage={setItemsPerPage}
+                filteredShifts={filteredShifts}
+                paginatedShifts={paginatedShifts}
+                totalPages={totalPages}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onOpenShiftModal={openShiftModal}
+                onToggleShift={handleToggleShift}
+                onDeleteShift={(shift) => setDeleteConfirm({ show: true, shift })}
+                onOpenAssignmentsModal={openAssignmentsModal}
               />
+
+              {/* Configuración General */}
+              <AttendanceGeneralConfig config={config} />
+
+              {/* Configuración de Supernumerarios */}
+              {config && (
+                <SupernumeraryConfig 
+                  config={config} 
+                  onUpdate={async (updates) => {
+                    if (!token) return;
+                    try {
+                      await updateAttendanceConfig(token, updates);
+                      // Recargar configuración
+                      const configRes = await getAttendanceConfig(token);
+                      setConfig(configRes);
+                      toast({
+                        type: 'success',
+                        title: 'Configuración actualizada',
+                        description: 'La configuración de supernumerarios se actualizó correctamente'
+                      });
+                    } catch (error: any) {
+                      toast({
+                        type: 'error',
+                        title: 'Error',
+                        description: error.message || 'No se pudo actualizar la configuración'
+                      });
+                    }
+                  }}
+                />
+              )}
             </div>
           )}
-        </div>
-  </Card>
 
-      {/* Horario Fijo */}
-      {config?.fixedScheduleEnabled && (
-        <>
-          <FixedScheduleOverviewCard fixedSchedule={config.fixedSchedule} onEdit={() => setShowFixedScheduleModal(true)} />
-          {config.fixedSchedule?.lunchBreakEnabled && config.fixedSchedule?.lunchBreak && (
-            <div className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-              Descanso de almuerzo: {formatTimeRange(config.fixedSchedule.lunchBreak)}
-            </div>
-          )}
-        </>
-      )}
-
-  {/* Turnos Rotativos */}
-      {config?.rotatingShiftsEnabled && (
-        <RotatingShiftsList 
-          shifts={config.rotatingShifts}
-          onNew={() => openShiftModal()}
-          onToggle={handleToggleShift}
-          onEdit={(s) => openShiftModal(s)}
-          onDelete={(s) => setDeleteConfirm({ show: true, shift: s })}
-        />
-      )}
-
-  {/* Configuración General */}
-      {config && (
-        <Card>
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Settings size={20} style={{ color: 'var(--ot-blue-500)' }} />
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Configuración General
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Timer size={16} style={{ color: 'var(--ot-blue-600)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Duración de descanso
-                  </span>
-                </div>
-                <p className="text-lg font-semibold" style={{ color: 'var(--ot-blue-600)' }}>
-                  {config.breakDurationMinutes} min
-                </p>
-              </div>
-              
-              <div className="p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock size={16} style={{ color: 'var(--ot-green-600)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Tolerancia
-                  </span>
-                </div>
-                <p className="text-lg font-semibold" style={{ color: 'var(--ot-green-600)' }}>
-                  {config.toleranceMinutes} min
-                </p>
-              </div>
-              
-              <div className="p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar size={16} style={{ color: 'var(--ot-purple-600)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Fines de semana
-                  </span>
-                </div>
-                <p className="text-lg font-semibold" style={{ color: 'var(--ot-purple-600)' }}>
-                  {config.weekendEnabled ? 'Habilitado' : 'Deshabilitado'}
-                </p>
-              </div>
-              
-              <div className="p-3 rounded-lg" style={{ background: 'var(--surface-muted)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Users size={16} style={{ color: 'var(--ot-yellow-600)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Horas extra
-                  </span>
-                </div>
-                <p className="text-lg font-semibold" style={{ color: 'var(--ot-yellow-600)' }}>
-                  {config.overtimeEnabled ? 'Habilitado' : 'Deshabilitado'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
 
   {/* Modal Configuración General */}
       <Modal
@@ -673,7 +627,7 @@ export default function AsistenciaPage() {
         onClose={() => setShowFixedScheduleModal(false)}
         title="Configurar Horario Fijo"
         icon={<Calendar size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-3xl"
+        maxWidth="3xl"
       >
         <form onSubmit={handleFixedScheduleSubmit} className="p-6 space-y-6">
           {/* Configuración de Almuerzo */}
@@ -939,251 +893,19 @@ export default function AsistenciaPage() {
         </form>
       </Modal>
 
-        </>
-      )}
-
-      {/* Tab Contenido - Asignaciones */}
-      {activeTab === 'assignments' && (
-        <div className="space-y-6">
-          {/* Horario Fijo - Asignaciones */}
-          {config?.fixedScheduleEnabled && (
-            <Card>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <Calendar size={20} style={{ color: 'var(--ot-blue-500)' }} />
-                    <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      Horario Fijo - Asignaciones
-                    </h2>
+          {/* Tab Contenido - Asignaciones */}
+          {activeTab === 'assignments' && (
+            <div className="space-y-6 sm:space-y-8 lg:space-y-12">
+              <AttendanceAssignmentsSection
+                config={config}
+                areas={areas}
+                cargos={cargos}
+                onOpenAssignmentsModal={openAssignmentsModal}
+              />
                   </div>
-                  <Button 
-                    onClick={() => openAssignmentsModal('FIXED')}
-                    className="flex items-center gap-2"
-                  >
-                    <Users2 size={16} />
-                    Gestionar Asignaciones
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg border" style={{ 
-                    background: 'var(--surface-muted)', 
-                    borderColor: 'var(--border)' 
-                  }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building2 size={16} style={{ color: 'var(--ot-blue-600)' }} />
-                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                        Áreas Asignadas
-                      </span>
-                    </div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {config.fixedSchedule?.assignedAreas?.length || 0} áreas asignadas
-                    </p>
-                    {config.fixedSchedule?.assignedAreas && config.fixedSchedule.assignedAreas.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {config.fixedSchedule.assignedAreas.slice(0, 3).map(areaId => {
-                          const area = areas.find(a => a._id === areaId);
-                          return area ? (
-                            <span 
-                              key={areaId}
-                              className="px-2 py-1 text-xs rounded"
-                              style={{
-                                background: 'var(--ot-blue-100)',
-                                color: 'var(--ot-blue-700)'
-                              }}
-                            >
-                              {area.name}
-                            </span>
-                          ) : null;
-                        })}
-                        {config.fixedSchedule.assignedAreas.length > 3 && (
-                          <span className="px-2 py-1 text-xs rounded" style={{
-                            background: 'var(--surface-muted)',
-                            color: 'var(--text-muted)'
-                          }}>
-                            +{config.fixedSchedule.assignedAreas.length - 3} más
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-4 rounded-lg border" style={{ 
-                    background: 'var(--surface-muted)', 
-                    borderColor: 'var(--border)' 
-                  }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Briefcase size={16} style={{ color: 'var(--ot-green-600)' }} />
-                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                        Cargos Asignados
-                      </span>
-                    </div>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {config.fixedSchedule?.assignedCargos?.length || 0} cargos asignados
-                    </p>
-                    {config.fixedSchedule?.assignedCargos && config.fixedSchedule.assignedCargos.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {config.fixedSchedule.assignedCargos.slice(0, 3).map(cargoId => {
-                          const cargo = cargos.find(c => c._id === cargoId);
-                          return cargo ? (
-                            <span 
-                              key={cargoId}
-                              className="px-2 py-1 text-xs rounded"
-                              style={{
-                                background: 'var(--ot-green-100)',
-                                color: 'var(--ot-green-700)'
-                              }}
-                            >
-                              {cargo.name}
-                            </span>
-                          ) : null;
-                        })}
-                        {config.fixedSchedule.assignedCargos.length > 3 && (
-                          <span className="px-2 py-1 text-xs rounded" style={{
-                            background: 'var(--surface-muted)',
-                            color: 'var(--text-muted)'
-                          }}>
-                            +{config.fixedSchedule.assignedCargos.length - 3} más
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
           )}
 
-          {/* Turnos Rotativos - Asignaciones */}
-          {config?.rotatingShiftsEnabled && (
-            <Card>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <RotateCcw size={20} style={{ color: 'var(--ot-green-500)' }} />
-                    <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      Turnos Rotativos - Asignaciones
-                    </h2>
-                  </div>
-                </div>
-
-                {config.rotatingShifts.length > 0 ? (
-                  <div className="space-y-4">
-                    {config.rotatingShifts.map((shift) => (
-                      <div 
-                        key={shift.id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-lg border"
-                        style={{ 
-                          background: 'var(--surface-muted)', 
-                          borderColor: 'var(--border)' 
-                        }}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <span style={{ fontSize: '1.2em' }}>
-                              {getShiftTypeIcon(shift.type)}
-                            </span>
-                            <div>
-                              <div className="flex items-center gap-3">
-                                <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                  {shift.name}
-                                </h3>
-                                <span 
-                                  className="px-2 py-1 text-xs rounded-full"
-                                  style={{
-                                    background: shift.isActive ? 'var(--ot-green-100)' : 'var(--ot-red-100)',
-                                    color: shift.isActive ? 'var(--ot-green-700)' : 'var(--ot-red-700)'
-                                  }}
-                                >
-                                  {shift.isActive ? 'Activo' : 'Inactivo'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm mt-1 flex-wrap" style={{ color: 'var(--text-muted)' }}>
-                                <span>{formatTimeRange(shift.timeSlot)}</span>
-                                <span>•</span>
-                                <span>{getShiftDuration(shift.timeSlot)}</span>
-                                {shift.description && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="break-words max-w-[220px] sm:max-w-none">{shift.description}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col gap-2 w-full sm:w-auto sm:items-end">
-                          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                            <Building2 size={14} />
-                            <span>{shift.assignedAreas?.length || 0} áreas</span>
-                            <Briefcase size={14} />
-                            <span>{shift.assignedCargos?.length || 0} cargos</span>
-                          </div>
-                          {/* Chips de Áreas asignadas */}
-                          {shift.assignedAreas && shift.assignedAreas.length > 0 && (
-                            <div className="flex flex-wrap gap-1 justify-end">
-                              {shift.assignedAreas.slice(0, 3).map(areaId => {
-                                const area = areas.find(a => a._id === areaId);
-                                return area ? (
-                                  <span key={areaId} className="px-2 py-1 text-xs rounded" style={{ background: 'var(--ot-blue-100)', color: 'var(--ot-blue-700)' }}>
-                                    {area.name}
-                                  </span>
-                                ) : null;
-                              })}
-                              {shift.assignedAreas.length > 3 && (
-                                <span className="px-2 py-1 text-xs rounded" style={{ background: 'var(--surface-muted)', color: 'var(--text-muted)' }}>
-                                  +{shift.assignedAreas.length - 3} más
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {/* Chips de Cargos asignados */}
-                          {shift.assignedCargos && shift.assignedCargos.length > 0 && (
-                            <div className="flex flex-wrap gap-1 justify-end">
-                              {shift.assignedCargos.slice(0, 3).map(cargoId => {
-                                const cargo = cargos.find(c => c._id === cargoId);
-                                return cargo ? (
-                                  <span key={cargoId} className="px-2 py-1 text-xs rounded" style={{ background: 'var(--ot-green-100)', color: 'var(--ot-green-700)' }}>
-                                    {cargo.name}
-                                  </span>
-                                ) : null;
-                              })}
-                              {shift.assignedCargos.length > 3 && (
-                                <span className="px-2 py-1 text-xs rounded" style={{ background: 'var(--surface-muted)', color: 'var(--text-muted)' }}>
-                                  +{shift.assignedCargos.length - 3} más
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 justify-end">
-                            <Button
-                              onClick={() => openAssignmentsModal('ROTATING', shift)}
-                              variant="neutral"
-                              className="p-2"
-                              title="Gestionar asignaciones"
-                            >
-                              <Users2 size={16} />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                    <RotateCcw size={32} className="mx-auto mb-2 opacity-50" />
-                    <p>No hay turnos configurados</p>
-                    <p className="text-xs">Crea turnos para gestionar asignaciones</p>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-        </div>
-  )}
-
-      {/* Confirm Dialog */}
+          {/* Modales y Diálogos */}
       <ConfirmDialog
         isOpen={deleteConfirm.show}
         title="Eliminar Turno"
@@ -1205,7 +927,6 @@ export default function AsistenciaPage() {
         onCancel={() => setDeleteConfirm({ show: false, shift: null })}
       />
 
-      {/* Modal de Asignaciones */}
       <ShiftAssignmentsModal
         isOpen={showAssignmentsModal}
         onClose={() => setShowAssignmentsModal(false)}
@@ -1217,6 +938,8 @@ export default function AsistenciaPage() {
         cargos={cargos}
         onAssignmentsUpdated={handleAssignmentsUpdated}
       />
+        </div>
+      </div>
     </div>
   );
 }

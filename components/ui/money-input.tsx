@@ -118,12 +118,9 @@ export function MoneyInput({
       )}
       
       <Input
-        id={`money-input-${label}`}
         type="text"
         value={inputValue}
         onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
         placeholder={placeholder || formatMoney(0, currency, displayFormat)}
         disabled={disabled}
         required={required}

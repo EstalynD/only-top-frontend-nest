@@ -20,6 +20,7 @@ import { ConsolidarPeriodoModal } from '@/components/finanzas/ConsolidarPeriodoM
 import TransaccionesTable from '@/components/finanzas/TransaccionesTable';
 import ResumenTransacciones from '@/components/finanzas/ResumenTransacciones';
 import { Lock, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 export default function BankPage() {
   const { token } = useAuth();
@@ -85,32 +86,30 @@ export default function BankPage() {
 
         <div className="flex items-center gap-3">
           {/* Botón Refresh */}
-          <button
+          <Button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-3 rounded-lg transition-all disabled:opacity-50"
-            style={{
-              background: 'var(--surface-muted)',
-              color: 'var(--text-primary)',
-            }}
-            title="Actualizar datos"
-          >
-            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-          </button>
+            variant="neutral"
+            size="sm"
+            icon={<RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />}
+            loading={refreshing}
+            ariaLabel="Actualizar datos"
+          />
 
           {/* Botón Consolidar Periodo */}
-          <button
+          <Button
             onClick={() => setConsolidandoOpen(true)}
             disabled={loading}
-            className="px-6 py-3 rounded-lg text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            size="md"
+            icon={<Lock size={18} />}
             style={{
               background: '#f59e0b',
               color: '#ffffff',
             }}
           >
-            <Lock size={18} />
             Consolidar Periodo Actual
-          </button>
+          </Button>
         </div>
       </div>
 

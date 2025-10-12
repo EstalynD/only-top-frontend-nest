@@ -1,6 +1,7 @@
 import { requestJSON } from '../utils/fetcher';
 
 export type ShiftType = 'AM' | 'PM' | 'MADRUGADA' | 'CUSTOM';
+export type SupernumeraryMode = 'REPLACEMENT' | 'FIXED_SCHEDULE';
 
 export interface TimeSlot {
   startTime: string; // Format: "HH:mm"
@@ -47,6 +48,10 @@ export interface AttendanceConfig {
   description?: string;
   updatedBy?: string;
   attendanceEnabledFrom?: string | null;
+  // Configuración de supernumerarios
+  supernumeraryMode: SupernumeraryMode;
+  allowedReplacementShifts: string[];
+  supernumeraryFixedSchedule?: FixedSchedule;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,6 +68,10 @@ export interface UpdateAttendanceConfigRequest {
   timezone?: string;
   description?: string;
   attendanceEnabledFrom?: string | null;
+  // Configuración de supernumerarios
+  supernumeraryMode?: SupernumeraryMode;
+  allowedReplacementShifts?: string[];
+  supernumeraryFixedSchedule?: FixedSchedule;
 }
 
 export interface CreateShiftRequest {

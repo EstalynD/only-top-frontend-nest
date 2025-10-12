@@ -5,7 +5,7 @@ import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { Select, SelectField, type SelectOption } from '@/components/ui/Select';
+import { Select, SelectField, type SelectOption } from '@/components/ui/selectUI';
 import { aprobarContrato } from '@/lib/service-rrhh/empleados-api';
 import type { Contrato } from '@/lib/service-rrhh/empleados-types';
 
@@ -162,7 +162,7 @@ export default function ContratoModal({ isOpen, onClose, onSuccess, contrato, to
         onClose={onClose}
         title="Detalles del Contrato"
         icon={<FileText size={20} style={{ color: 'var(--ot-blue-500)' }} />}
-        maxWidth="max-w-4xl"
+        maxWidth="4xl"
       >
         <div className="p-6 space-y-6">
           {/* Header del Contrato */}
@@ -336,6 +336,7 @@ export default function ContratoModal({ isOpen, onClose, onSuccess, contrato, to
                 options={estadoOptions}
                 disabled={true}
                 helpText="Estado actual del contrato"
+                size="md"
               />
               
               <SelectField
@@ -349,6 +350,8 @@ export default function ContratoModal({ isOpen, onClose, onSuccess, contrato, to
                 placeholder="Seleccionar nuevo estado"
                 disabled={loading}
                 helpText="Selecciona el nuevo estado para el contrato"
+                size="md"
+                clearable={false}
               />
             </div>
           </div>

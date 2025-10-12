@@ -101,6 +101,23 @@ export function Select({
     lg: 'px-4 py-2.5 text-base'
   };
 
+  // Estilos consistentes con AreaModal - sin transparencias
+  const selectButtonStyle = {
+    width: '100%',
+    padding: size === 'sm' ? '0.375rem 0.75rem' : size === 'md' ? '0.5rem 0.75rem' : '0.625rem 1rem',
+    fontSize: size === 'sm' ? '0.875rem' : size === 'md' ? '0.875rem' : '1rem',
+    borderRadius: '0.5rem',
+    border: '1px solid var(--border)',
+    background: 'var(--surface)',
+    color: selectedOption ? 'var(--text-primary)' : 'var(--text-muted)',
+    transition: 'all 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '0.5rem',
+    cursor: disabled ? 'not-allowed' : 'pointer'
+  };
+
   const iconSizes = {
     sm: 16,
     md: 18,
@@ -117,18 +134,22 @@ export function Select({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`
-          w-full flex items-center justify-between gap-2 rounded-lg border transition-colors
-          ${sizeClasses[size]}
-          ${disabled 
-            ? 'opacity-50 cursor-not-allowed' 
-            : 'cursor-pointer hover:border-[var(--ot-blue-600)] focus:outline-none focus:border-[var(--ot-blue-600)]'
-          }
-          ${isOpen ? 'border-[var(--ot-blue-600)]' : 'border-[var(--border)]'}
-        `}
+        className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         style={{
-          background: 'var(--ot-select-bg, var(--input-bg))',
-          color: selectedOption ? 'var(--text-primary)' : 'var(--text-muted)'
+          ...selectButtonStyle,
+          borderColor: isOpen ? 'var(--ot-blue-600)' : 'var(--border)',
+          background: disabled ? 'var(--surface-muted)' : 'var(--surface)',
+          color: disabled ? 'var(--text-muted)' : (selectedOption ? 'var(--text-primary)' : 'var(--text-muted)')
+        }}
+        onMouseEnter={(e) => {
+          if (!disabled && !isOpen) {
+            e.currentTarget.style.borderColor = 'var(--ot-blue-600)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!disabled && !isOpen) {
+            e.currentTarget.style.borderColor = 'var(--border)';
+          }
         }}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -142,9 +163,21 @@ export function Select({
           {clearable && value && !disabled && (
             <div
               onClick={handleClear}
-              className="p-0.5 rounded hover:bg-[var(--surface-muted)] transition-colors"
+              className="p-0.5 rounded transition-colors"
+              style={{ 
+                background: 'transparent',
+                color: 'var(--text-muted)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--surface-muted)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-muted)';
+              }}
             >
-              <X size={iconSizes[size] - 4} style={{ color: 'var(--text-muted)' }} />
+              <X size={iconSizes[size] - 4} />
             </div>
           )}
           <ChevronDown 
@@ -160,8 +193,8 @@ export function Select({
           className="absolute z-50 w-full mt-1 rounded-lg border overflow-hidden ot-select__panel"
           style={{
             borderColor: 'var(--border)',
-            background: 'var(--ot-select-panel, var(--surface))',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            background: 'var(--background)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
           }}
         >
           {options.length > 5 && (
@@ -178,10 +211,10 @@ export function Select({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar..."
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md border transition-colors focus:outline-none focus:border-[var(--ot-blue-600)]"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   style={{
                     borderColor: 'var(--border)',
-                    background: 'var(--ot-select-input, var(--input-bg))',
+                    background: 'var(--background)',
                     color: 'var(--text-primary)'
                   }}
                 />
@@ -192,7 +225,7 @@ export function Select({
           <div 
             className="max-h-60 overflow-y-auto"
             role="listbox"
-            style={{ background: 'var(--ot-select-panel, var(--surface))' }}
+            style={{ background: 'var(--background)' }}
           >
             {filteredOptions.length === 0 ? (
               <div 
@@ -210,16 +243,30 @@ export function Select({
                   onClick={() => handleSelect(option.value)}
                   disabled={option.disabled}
                   className={`
-                    w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-colors
+                    w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-all duration-200
                     ${option.disabled 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:bg-[var(--ot-select-hover, var(--surface-muted))] cursor-pointer'
+                      ? 'cursor-not-allowed' 
+                      : 'cursor-pointer'
                     }
                   `}
                   style={{
                     color: option.disabled ? 'var(--text-muted)' : 'var(--text-primary)',
-                    background: value === option.value ? 'var(--ot-select-hover, var(--surface-muted))' : undefined,
-                    boxShadow: value === option.value ? 'inset 2px 0 0 var(--ot-blue-600)' : undefined
+                    background: option.disabled 
+                      ? 'var(--surface-muted)' 
+                      : value === option.value 
+                        ? 'var(--surface-muted)' 
+                        : 'var(--background)',
+                    borderLeft: value === option.value ? '3px solid var(--ot-blue-600)' : '3px solid transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!option.disabled) {
+                      e.currentTarget.style.background = 'var(--surface-muted)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!option.disabled) {
+                      e.currentTarget.style.background = value === option.value ? 'var(--surface-muted)' : 'var(--background)';
+                    }
                   }}
                   role="option"
                   aria-selected={value === option.value}
@@ -258,8 +305,13 @@ export function SelectField({
   return (
     <div className="space-y-1.5">
       <label 
-        className="block text-sm font-medium"
-        style={{ color: 'var(--text-primary)' }}
+        className="block"
+        style={{ 
+          fontSize: '0.75rem',
+          fontWeight: '500',
+          marginBottom: '0.25rem',
+          color: 'var(--text-primary)'
+        }}
       >
         {label}
         {required && (
